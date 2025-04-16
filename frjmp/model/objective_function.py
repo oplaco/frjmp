@@ -1,0 +1,16 @@
+from ortools.sat.python import cp_model
+from typing import Dict
+
+
+def minimize_total_movements(
+    model: cp_model.CpModel, movement_vars_vars: Dict[int, Dict[int, cp_model.IntVar]]
+):
+    """
+    Add an objective to minimize the total number of aircraft movements.
+    """
+    all_moves = []
+    for aircraft_id, time_dict in movement_vars_vars.items():
+        for var in time_dict.values():
+            all_moves.append(var)
+
+    model.Minimize(sum(all_moves))
