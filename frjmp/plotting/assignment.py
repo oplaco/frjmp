@@ -1,58 +1,80 @@
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 
 
-def plot_assignment_gantt(assigned_vars, solver, positions, index_to_date, jobs):
+def plot_assignment_gantt(
+    assigned_vars, solver, positions, jobs, ax, x_vals, color_map, use_real_dates
+):
     """
-    Creates a Gantt-like chart showing which job is assigned to which position at which time.
+    Creates a Gantt-like chart showing job assignments over time, grouped by position.
+
+    Each bar represents a time block during which a job is assigned to a specific position.
+    Bars are colored per aircraft to maintain consistency, and aircraft labels are shown inside the bars.
 
     Args:
-        assigned_vars: Dict[j][p][t] -> BoolVar from the solution
-        solver: OR-Tools solver with solution
-        positions: list of Position objects
-        index_to_date: dict of {int: date}, mapping compressed time index to actual date
-        jobs: list of Job objects
+        assigned_vars: Dict[int][int][int] -> BoolVar indicating if job j is assigned to position p at time step t.
+        solver: OR-Tools solver with values assigned after solving.
+        positions: List of Position objects available for job assignment.
+        jobs: List of Job objects to be scheduled.
+        ax: Matplotlib Axes object to draw the plot on.
+        x_vals: List of time step values (either compressed indices or real dates), matching solver time steps.
+        color_map: Dict mapping aircraft names to consistent plot colors.
+        use_real_dates: Whether the X-axis should use actual date values instead of time step indices.
+
+    Returns:
+        fig, ax: The Matplotlib Figure and Axes with the plotted data.
     """
-    fig, ax = plt.subplots(figsize=(12, 6))
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(12, 6))
+    else:
+        fig = ax.figure
 
     pos_index_map = {idx: pos.name for idx, pos in enumerate(positions)}
     y_labels = []
     y_ticks = []
 
-    colors = plt.cm.get_cmap("tab10", len(jobs))
-
     for p_idx, pos_name in pos_index_map.items():
         y = p_idx
         y_labels.append(pos_name)
         y_ticks.append(y)
-
         for j_idx, job in enumerate(jobs):
             if p_idx not in assigned_vars.get(j_idx, {}):
                 continue
-
+            aircraft_name = job.aircraft.name
             active_blocks = []
             for t_idx, var in assigned_vars[j_idx][p_idx].items():
                 if solver.Value(var):
                     active_blocks.append(t_idx)
-
             if active_blocks:
-                # Group into consecutive time blocks
                 start = prev = active_blocks[0]
-                for t in active_blocks[1:] + [None]:  # Add sentinel
+                for t in active_blocks[1:] + [None]:
                     if t is None or t != prev + 1:
-                        # Plot from start to prev
+                        # Use x_vals[start] as the left edge
+                        bar_left = x_vals[start]
+                        if use_real_dates:
+                            width = (x_vals[prev] - x_vals[start]).days + 1
+                        else:
+                            width = prev - start + 1
+
                         ax.barh(
                             y,
-                            prev - start + 1,
-                            left=start,
-                            height=0.4,
-                            color=colors(j_idx),
+                            width,
+                            left=bar_left,
+                            height=0.8,
+                            color=color_map[aircraft_name],
                             edgecolor="black",
                         )
+                        # Place label at midpoint
+                        if use_real_dates:
+                            from datetime import timedelta
+
+                            label_x = bar_left + timedelta(days=width / 2)
+                        else:
+                            label_x = bar_left + width / 2
                         ax.text(
-                            (start + prev) / 2,
+                            label_x,
                             y,
-                            jobs[j_idx],
+                            str(job),
                             va="center",
                             ha="center",
                             fontsize=8,
@@ -64,8 +86,13 @@ def plot_assignment_gantt(assigned_vars, solver, positions, index_to_date, jobs)
 
     ax.set_yticks(y_ticks)
     ax.set_yticklabels(y_labels)
-    ax.set_xlabel("Time Step Index (compressed)")
     ax.set_title("Aircraft Positioning Gantt Chart")
 
-    plt.tight_layout()
-    plt.show()
+    # Add legend based on color map
+    handles = [
+        plt.Line2D([0], [0], color=color_map[name], lw=2, label=name)
+        for name in color_map
+    ]
+    ax.legend(handles=handles, title="Aircraft")
+
+    return fig, ax

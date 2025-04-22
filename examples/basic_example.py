@@ -1,19 +1,17 @@
-from datetime import date
-
 if __name__ == "__main__":
     import sys
     import os
 
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+from datetime import date, timedelta
 from frjmp.model.sets.need import Need
 from frjmp.model.sets.phase import Phase
 from frjmp.model.sets.aircraft import Aircraft
 from frjmp.model.sets.position import Position
 from frjmp.model.sets.job import Job
 from frjmp.model.problem import Problem
-from frjmp.plotting.assignment import plot_assignment_gantt
-from frjmp.plotting.movement import plot_cumulative_movements
+from examples.plot_example import plot_solution
 
 # Create Needs
 e_need = Need("E")
@@ -27,22 +25,25 @@ foury_phase = Phase("4Y", wp_need)
 a1 = Aircraft("185")
 a2 = Aircraft("187")
 
+# T0
+t0 = date(2025, 4, 15)
+
 # Create Jobs
-job1 = Job(a1, edv_phase, date(2025, 4, 15), date(2025, 4, 18))
-job2 = Job(a2, edv_phase, date(2025, 4, 16), date(2025, 4, 20))
-job3 = Job(a2, foury_phase, date(2025, 4, 25), date(2025, 7, 20))
+job1 = Job(a1, edv_phase, t0, t0 + timedelta(days=10))
+job2 = Job(a2, edv_phase, date(2025, 4, 16), date(2025, 5, 20))
+job3 = Job(a2, foury_phase, date(2025, 5, 25), date(2025, 7, 20))
 
 jobs = [job1, job2, job3]
 
 # Create Positions
-posA = Position("Hangar A", [wp_need, e_need])
-posB = Position("Hangar B", [wp_need, e_need])
+posA = Position("Hangar A", [e_need])
+posB = Position("Hangar B", [e_need, wp_need])
 
 positions = [posA, posB]
 
 
 # Initialize Problem
-problem = Problem(jobs, positions)
+problem = Problem(jobs, positions, t0)
 
 
 # Solve
@@ -60,21 +61,9 @@ if status == 4:
                         f"Job {j_idx} → Position {p_idx} at t={t_idx} ({problem.index_to_date[t_idx]})"
                     )
 
-    plot_assignment_gantt(
-        assigned_vars=problem.assigned_vars,
-        solver=solver,
-        positions=problem.positions,
-        index_to_date=problem.index_to_date,
-        jobs=problem.jobs,
-    )
-
-    plot_cumulative_movements(
-        moved_vars=problem.movement_vars,
-        solver=solver,
-        jobs=problem.jobs,
-        index_to_date=problem.index_to_date,
-        use_real_dates=True,
-    )
+    plot_solution(problem, solver)
 
 else:
     print("No solution found.")
+
+print("Finished.")

@@ -1,5 +1,6 @@
 # frjmp/model/problem.py
 
+from datetime import date
 from ortools.sat.python import cp_model
 from frjmp.model.variables.assignment import create_assignment_variables
 from frjmp.model.variables.movement import create_movement_variables
@@ -9,7 +10,7 @@ from frjmp.model.constraints.movement import add_movement_detection_constraints
 from frjmp.model.objective_function import minimize_total_movements
 from frjmp.model.sets.job import Job
 from frjmp.model.sets.position import Position
-from frjmp.utils.timeline_utils import compress_dates
+from frjmp.utils.timeline_utils import compress_dates, trim_jobs_before_t0_inplace
 from frjmp.utils.validation_utils import (
     validate_capacity_feasibility,
     validate_non_overlapping_jobs_per_aircraft,
@@ -17,13 +18,20 @@ from frjmp.utils.validation_utils import (
 
 
 class Problem:
-    def __init__(self, jobs: list[Job], positions: list[Position]):
+    def __init__(
+        self, jobs: list[Job], positions: list[Position], t0: date = date.today()
+    ):
         self.jobs = jobs
         self.positions = positions
+        self.t0 = t0
 
         self.model = cp_model.CpModel()
 
+        # Set initial conditions
+
         # --- Pre-processing ---#
+        trim_jobs_before_t0_inplace(jobs, t0)
+
         # Calculate compressed time scale
         compressed_dates, date_to_index, index_to_date = compress_dates(jobs)
         self.compressed_dates = compressed_dates
