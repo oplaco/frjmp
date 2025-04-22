@@ -9,7 +9,7 @@ def plot_solution(problem, solver):
     color_map = {name: plt.cm.tab10(i % 10) for i, name in enumerate(aircraft_names)}
 
     # 2. Compute x_vals for both plots:
-    use_real_dates = True
+    use_real_dates = False
     time_indices = sorted(problem.index_to_date.keys())
     x_vals = [problem.index_to_date[t] if use_real_dates else t for t in time_indices]
 

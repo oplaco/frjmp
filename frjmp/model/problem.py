@@ -56,13 +56,6 @@ class Problem:
         self.movement_vars = create_movement_variables(
             self.model, self.jobs, self.time_step_indexes
         )
-        add_position_capacity_constraints(
-            self.model,
-            self.assigned_vars,
-            self.positions,
-            self.jobs,
-            num_timesteps=len(self.time_step_indexes),
-        )
 
     def add_constraints(self):
         add_job_assignment_constraints(
@@ -78,6 +71,14 @@ class Problem:
             self.assigned_vars,
             self.movement_vars,
             num_positions=len(self.positions),
+            num_timesteps=len(self.time_step_indexes),
+        )
+
+        add_position_capacity_constraints(
+            self.model,
+            self.assigned_vars,
+            self.positions,
+            self.jobs,
             num_timesteps=len(self.time_step_indexes),
         )
 

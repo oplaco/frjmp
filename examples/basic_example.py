@@ -36,7 +36,7 @@ job3 = Job(a2, foury_phase, date(2025, 5, 25), date(2025, 7, 20))
 jobs = [job1, job2, job3]
 
 # Create Positions
-posA = Position("Hangar A", [e_need])
+posA = Position("Hangar A", [e_need, wp_need])
 posB = Position("Hangar B", [e_need, wp_need])
 
 positions = [posA, posB]
@@ -53,13 +53,12 @@ status, solver = problem.solve()
 print("\nSolution:")
 if status == 4:
     print("\nOptimal Solution found:")
-    for j_idx, j_dict in problem.assigned_vars.items():
-        for p_idx, p_dict in j_dict.items():
-            for t_idx, var in p_dict.items():
-                if solver.Value(var):
-                    print(
-                        f"Job {j_idx} → Position {p_idx} at t={t_idx} ({problem.index_to_date[t_idx]})"
-                    )
+    for j_idx, j_dict in problem.movement_vars.items():
+        for t_idx, var in j_dict.items():
+            if solver.Value(var) == 1:
+                print(
+                    f"Movement Job {j_idx} at t={t_idx} ({problem.index_to_date[t_idx]})"
+                )
 
     plot_solution(problem, solver)
 

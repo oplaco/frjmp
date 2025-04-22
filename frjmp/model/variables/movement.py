@@ -9,7 +9,8 @@ def create_movement_variables(
 
     for j_idx, job in enumerate(jobs):
         movement_vars[j_idx] = {}
-        for t_idx in range(1, len(time_indices)):
+        # Movements are posible starting and including t0
+        for t_idx in range(0, len(time_indices)):
             movement_vars[j_idx][t_idx] = model.NewBoolVar(
                 f"movement_vars_j{j_idx}_t{t_idx}"
             )
