@@ -1,15 +1,6 @@
 from collections import defaultdict
 from datetime import date
 from typing import List, Dict, Tuple
-
-from frjmp.model.sets.job import Job
-from frjmp.model.sets.position import Position
-
-
-from collections import defaultdict
-from datetime import date
-from typing import List, Dict, Tuple
-
 from frjmp.model.sets.job import Job
 from frjmp.model.sets.position import Position
 

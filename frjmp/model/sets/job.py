@@ -1,6 +1,6 @@
 from frjmp.model.sets.aircraft import Aircraft
 from frjmp.model.sets.phase import Phase
-from datetime import date
+from datetime import date, timedelta
 
 
 class Job:
@@ -17,10 +17,3 @@ class Job:
 
     def __repr__(self):
         return f"{self.aircraft.name}-{self.phase.name}"
-
-    # def __repr__(self):
-    #     return (
-    #         f"Job(aircraft={self.aircraft.name}, "
-    #         f"phase={self.phase.name}, "
-    #         f"start={self.start}, end={self.end})"
-    #     )
