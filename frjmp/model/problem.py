@@ -3,7 +3,7 @@
 from datetime import date
 from ortools.sat.python import cp_model
 from frjmp.model.variables.assignment import create_assignment_variables
-from frjmp.model.variables.movement import create_movement_variables
+from frjmp.model.variables.movement import create_aircraft_movement_variables
 from frjmp.model.constraints.assignment import add_job_assignment_constraints
 from frjmp.model.constraints.capacity import add_position_capacity_constraints
 from frjmp.model.constraints.movement import add_movement_detection_constraints
@@ -53,7 +53,7 @@ class Problem:
             self.compressed_dates,
             self.date_to_index,
         )
-        self.movement_vars = create_movement_variables(
+        self.movement_vars = create_aircraft_movement_variables(
             self.model, self.jobs, self.time_step_indexes
         )
 
@@ -70,6 +70,7 @@ class Problem:
             self.model,
             self.assigned_vars,
             self.movement_vars,
+            self.jobs,
             num_positions=len(self.positions),
             num_timesteps=len(self.time_step_indexes),
         )

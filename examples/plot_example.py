@@ -28,9 +28,8 @@ def plot_solution(problem, solver):
     )
 
     plot_cumulative_movements(
-        moved_vars=problem.movement_vars,
+        movement_vars=problem.movement_vars,
         solver=solver,
-        jobs=problem.jobs,
         ax=axs[1],
         x_vals=x_vals,
         color_map=color_map,

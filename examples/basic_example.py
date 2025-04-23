@@ -15,12 +15,12 @@ from examples.plot_example import plot_solution
 from frjmp.utils.preprocessing_utils import insert_waiting_jobs
 
 # Create Needs
-e_need = Need("E")
+edv_need = Need("E")
 wp_need = Need("WP")
 w_need = Need("Waiting")
 
 # Create Phases
-edv_phase = Phase("EDV", e_need)
+edv_phase = Phase("EDV", edv_need)
 foury_phase = Phase("4Y", wp_need)
 waiting_phase = Phase("WAITING", wp_need)
 
@@ -33,15 +33,15 @@ t0 = date(2025, 4, 15)
 
 # Create Jobs
 job1 = Job(a1, edv_phase, t0, t0 + timedelta(days=10))
-job2 = Job(a2, edv_phase, date(2025, 4, 16), date(2025, 5, 20))
-job3 = Job(a2, foury_phase, date(2025, 5, 25), date(2025, 7, 20))
+job2 = Job(a2, foury_phase, date(2025, 4, 16), date(2025, 5, 20))
+job3 = Job(a2, edv_phase, date(2025, 5, 25), date(2025, 7, 20))
 
 jobs = [job1, job2, job3]
 jobs = insert_waiting_jobs(jobs, waiting_phase)
 
 # Create Positions
-posA = Position("Hangar A", [e_need, wp_need, waiting_phase])
-posB = Position("Hangar B", [e_need, wp_need, waiting_phase])
+posA = Position("Hangar A", [edv_need, wp_need, waiting_phase])
+posB = Position("Hangar B", [wp_need, waiting_phase])
 
 positions = [posA, posB]
 
