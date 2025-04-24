@@ -24,10 +24,10 @@ class Problem:
         self.jobs = jobs
         self.positions = positions
         self.t0 = t0
-
+        self.fixed_variables = (
+            []
+        )  # List of (var, value) of fixed variables. This can be used for initial or contour conditions.
         self.model = cp_model.CpModel()
-
-        # Set initial conditions
 
         # --- Pre-processing ---#
         trim_jobs_before_t0_inplace(jobs, t0)
@@ -45,6 +45,9 @@ class Problem:
         validate_non_overlapping_jobs_per_aircraft(jobs)
         validate_capacity_feasibility(jobs, positions, compressed_dates, date_to_index)
 
+        # Build vriables
+        self.build_variables()
+
     def build_variables(self):
         self.assigned_vars = create_assignment_variables(
             self.model,
@@ -58,6 +61,11 @@ class Problem:
         )
 
     def add_constraints(self):
+        # Add the fixed values (if any) of the variables as constraints to the problem.
+        for var, value in self.fixed_variables:
+            self.model.Add(var == int(value))
+
+        # Add problem-specific constraints.
         add_job_assignment_constraints(
             self.model,
             self.assigned_vars,
@@ -86,8 +94,31 @@ class Problem:
     def set_objective(self):
         minimize_total_movements(self.model, self.movement_vars)
 
+    def add_fixed_assignment(self, j_idx, p_idx, t_idx, value=True):
+        try:
+            var = self.assigned_vars[j_idx][p_idx][t_idx]
+        except KeyError:
+            raise ValueError(
+                f"Invalid fixed assignment: variable for job {j_idx}, position {p_idx}, time {t_idx} does not exist."
+            )
+        self.fixed_variables.append((var, value))
+        return var
+
+    def add_fixed_movement(self, aircraft_name, t_idx, value=True):
+        try:
+            var = self.movement_vars[aircraft_name][t_idx]
+        except KeyError:
+            raise ValueError(
+                f"Invalid fixed movement: variable for aircraft '{aircraft_name}' at time {t_idx} does not exist."
+            )
+        self.fixed_variables.append((var, value))
+        return var
+
+    def add_fixed_bool_var(self, var, value=True):
+        # Appends to fixed_variables[] a boolean variable and its desired fixed value.
+        self.fixed_variables.append((var, value))
+
     def solve(self):
-        self.build_variables()
         self.add_constraints()
         self.set_objective()
 

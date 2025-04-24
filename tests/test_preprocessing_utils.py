@@ -1,10 +1,10 @@
 from datetime import date
 from frjmp.model.sets.job import Job
 from frjmp.utils.preprocessing_utils import insert_waiting_jobs
-from tests.setup import SharedTestSetup
+from tests.setup import BasicTestSetup
 
 
-class TestCapacityValidation(SharedTestSetup):
+class TestPreprocessingUtils(BasicTestSetup):
     def test_insert_waiting_jobs_creates_one_gap(self):
         jobs = [
             Job(self.aircraft1, self.phase1, date(2025, 1, 1), date(2025, 1, 2)),

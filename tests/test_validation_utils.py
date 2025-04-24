@@ -2,18 +2,22 @@ import unittest
 from datetime import date
 
 from frjmp.model.sets.job import Job
-from frjmp.model.sets.phase import Phase
-from frjmp.model.sets.need import Need
 from frjmp.model.sets.position import Position
-from frjmp.model.sets.aircraft import Aircraft
 from frjmp.utils.validation_utils import (
     validate_capacity_feasibility,
     validate_non_overlapping_jobs_per_aircraft,
 )
-from tests.setup import SharedTestSetup
+from tests.setup import BasicTestSetup
 
 
-class TestCapacityValidation(SharedTestSetup):
+class TestCapacityValidation(BasicTestSetup):
+    def setUp(self):
+        super().setUp()
+
+        # Avoid using compressed dates function and adding a dependency
+        self.compressed_dates = [self.date1, self.date2, self.date3, self.date4]
+        self.date_to_index = {d: i for i, d in enumerate(self.compressed_dates)}
+
     def test_single_need_globally_overbooked_fails(self):
         """2 units of need1 are required per day but only 1 is available"""
         jobs = [
@@ -86,7 +90,7 @@ class TestCapacityValidation(SharedTestSetup):
         self.assertEqual(result[1]["per_need"][self.need1.name], (2, 2))
 
 
-class TestOverlappingJobValidation(SharedTestSetup):
+class TestOverlappingJobValidation(BasicTestSetup):
     """Test validate_non_overlapping_jobs_per_aircraft function"""
 
     def test_on_job_overlap_for_same_aircraft_fails(self):

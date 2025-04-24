@@ -1,10 +1,16 @@
 from frjmp.model.sets.aircraft import Aircraft
 from frjmp.model.sets.phase import Phase
-from datetime import date, timedelta
+from datetime import date
 
 
 class Job:
-    def __init__(self, aircraft: Aircraft, phase: Phase, start: date, end: date):
+    def __init__(
+        self,
+        aircraft: Aircraft,
+        phase: Phase,
+        start: date,
+        end: date,
+    ):
         if end < start:
             raise ValueError(
                 f"Job for {aircraft} {phase} end date {end} cannot be before start date {start}."

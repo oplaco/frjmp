@@ -1,12 +1,19 @@
 import unittest
 from datetime import date
 
-from frjmp.model.sets.phase import Phase
-from frjmp.model.sets.need import Need
+from frjmp.model.problem import Problem
 from frjmp.model.sets.aircraft import Aircraft
+from frjmp.model.sets.need import Need
+from frjmp.model.sets.job import Job
+from frjmp.model.sets.phase import Phase
+from frjmp.model.sets.position import Position
 
 
-class SharedTestSetup(unittest.TestCase):
+"""Classes with setup methods that already include information we can reuse between test cases.
+"""
+
+
+class BasicTestSetup(unittest.TestCase):
     def setUp(self):
         self.need1 = Need("E")
         self.need2 = Need("WP")
@@ -26,10 +33,23 @@ class SharedTestSetup(unittest.TestCase):
         self.date3 = date(2025, 2, 12)
         self.date4 = date(2025, 3, 4)
 
-        # Avoid using compressed dates function and adding a dependency
-        self.compressed_dates = [self.date1, self.date2, self.date3, self.date4]
-        self.date_to_index = {d: i for i, d in enumerate(self.compressed_dates)}
-
         self.aircraft1 = Aircraft("MSN 001")
         self.aircraft2 = Aircraft("MSN 002")
         self.aircraft3 = Aircraft("MSN 003")
+
+
+class ProblemTestSetup(BasicTestSetup):
+    def setUp(self):
+        super().setUp()
+        jobs = [
+            Job(self.aircraft1, self.phase1, self.date1, self.date2),
+            Job(self.aircraft2, self.phase1, self.date1, self.date2),
+            Job(self.aircraft3, self.phase1, self.date1, self.date2),
+        ]
+        positions = [
+            Position("Hangar A", [self.need1], capacity=1),
+            Position("Hangar B", [self.need1], capacity=1),
+            Position("Hangar C", [self.need1], capacity=1),
+        ]
+        t0 = self.date1
+        self.problem = Problem(jobs, positions, t0)
