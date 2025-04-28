@@ -2,7 +2,7 @@ import unittest
 from datetime import date
 
 from frjmp.model.problem import Problem
-from frjmp.model.sets.aircraft import Aircraft
+from frjmp.model.sets.aircraft import Aircraft, AircraftModel
 from frjmp.model.sets.need import Need
 from frjmp.model.sets.job import Job
 from frjmp.model.sets.phase import Phase
@@ -33,9 +33,10 @@ class BasicTestSetup(unittest.TestCase):
         self.date3 = date(2025, 2, 12)
         self.date4 = date(2025, 3, 4)
 
-        self.aircraft1 = Aircraft("MSN 001")
-        self.aircraft2 = Aircraft("MSN 002")
-        self.aircraft3 = Aircraft("MSN 003")
+        self.aircraft_model = AircraftModel("C295")
+        self.aircraft1 = Aircraft("MSN 001", self.aircraft_model)
+        self.aircraft2 = Aircraft("MSN 002", self.aircraft_model)
+        self.aircraft3 = Aircraft("MSN 003", self.aircraft_model)
 
 
 class ProblemTestSetup(BasicTestSetup):

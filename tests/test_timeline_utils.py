@@ -5,13 +5,14 @@ from frjmp.utils.timeline_utils import compress_dates, trim_jobs_before_t0_inpla
 from frjmp.model.sets.job import Job
 from frjmp.model.sets.phase import Phase
 from frjmp.model.sets.need import Need
-from frjmp.model.sets.aircraft import Aircraft
+from frjmp.model.sets.aircraft import Aircraft, AircraftModel
 
 
 class TestCompressDates(unittest.TestCase):
     def test_compression_pass(self):
         # Setup
-        aircraft = Aircraft("185")
+        model = AircraftModel("C295")
+        aircraft = Aircraft("185", model)
         wp = Need("WP")
         phase1 = Phase("4Y", wp)
         phase2 = Phase("WP", wp)
@@ -33,7 +34,8 @@ class TestCompressDates(unittest.TestCase):
         )
 
     def test_trim_jobs_pass(self):
-        aircraft = Aircraft("185")
+        model = AircraftModel("C295")
+        aircraft = Aircraft("185", model)
         wp = Need("WP")
         phase = Phase("4Y", wp)
 

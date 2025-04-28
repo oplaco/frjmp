@@ -2,20 +2,25 @@ import unittest
 from datetime import date
 from ortools.sat.python import cp_model
 from frjmp.model.parameters.movement_dependency import MovementDependency
-from frjmp.model.sets.aircraft import Aircraft
+from frjmp.model.sets.aircraft import Aircraft, AircraftModel
 from frjmp.model.sets.phase import Phase
 from frjmp.model.sets.need import Need
 from frjmp.model.sets.position import Position
 from frjmp.model.sets.job import Job
 from frjmp.model.variables.assignment import create_assignment_variables
-from frjmp.model.variables.movement import create_aircraft_movement_variables
+from frjmp.model.variables.movement import (
+    create_aircraft_movement_variables,
+    create_movement_in_position_variables,
+)
+from frjmp.model.constraints.assignment import add_job_assignment_constraints
 from frjmp.model.constraints.movement import add_movement_detection_constraints
 from frjmp.utils.timeline_utils import compress_dates
 
 
 class TestMovementConstraint(unittest.TestCase):
     def setUp(self):
-        self.aircraft = Aircraft("AC1")
+        self.aircraft_model = AircraftModel("C295")
+        self.aircraft = Aircraft("AC1", self.aircraft_model)
         self.need = Need("repair")
         self.phase = Phase("repair-phase", self.need)
         self.job1 = Job(self.aircraft, self.phase, date(2025, 4, 10), date(2025, 4, 12))
@@ -40,6 +45,7 @@ class TestMovementConstraint(unittest.TestCase):
         self.aircraft_movement_vars = create_aircraft_movement_variables(
             self.model, self.jobs, self.time_step_indexes
         )
+
         self.assigned_vars = create_assignment_variables(
             self.model,
             self.jobs,
@@ -48,10 +54,25 @@ class TestMovementConstraint(unittest.TestCase):
             self.date_to_index,
         )
 
+        self.movement_in_position_vars = create_movement_in_position_variables(
+            self.model, self.positions, self.time_step_indexes
+        )
+
+        # Add basic constraints
+        add_job_assignment_constraints(
+            self.model,
+            self.assigned_vars,
+            self.jobs,
+            self.positions,
+            self.date_to_index,
+            self.compressed_dates,
+        )
+
         add_movement_detection_constraints(
             self.model,
             self.assigned_vars,
             self.aircraft_movement_vars,
+            self.movement_in_position_vars,
             self.jobs,
             num_positions=len(self.positions),
             num_timesteps=len(self.time_step_indexes),
