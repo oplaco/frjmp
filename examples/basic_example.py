@@ -57,7 +57,7 @@ status, solver = problem.solve()
 print("\nSolution:")
 if status == 4:
     print("\nOptimal Solution found:")
-    for j_idx, j_dict in problem.movement_vars.items():
+    for j_idx, j_dict in problem.aircraft_movement_vars.items():
         for t_idx, var in j_dict.items():
             if solver.Value(var) == 1:
                 print(

@@ -41,15 +41,13 @@ class BasicTestSetup(unittest.TestCase):
 class ProblemTestSetup(BasicTestSetup):
     def setUp(self):
         super().setUp()
-        jobs = [
-            Job(self.aircraft1, self.phase1, self.date1, self.date2),
-            Job(self.aircraft2, self.phase1, self.date1, self.date2),
-            Job(self.aircraft3, self.phase1, self.date1, self.date2),
-        ]
-        positions = [
-            Position("Hangar A", [self.need1], capacity=1),
-            Position("Hangar B", [self.need1], capacity=1),
-            Position("Hangar C", [self.need1], capacity=1),
-        ]
+        job1 = Job(self.aircraft1, self.phase1, self.date1, self.date3)
+        job2 = Job(self.aircraft2, self.phase1, self.date1, self.date2)
+        job3 = Job(self.aircraft3, self.phase1, self.date1, self.date2)
+        jobs = [job1, job2, job3]
+        self.position1 = Position("Hangar A", [self.need1], capacity=1)
+        self.position2 = Position("Hangar B", [self.need1], capacity=1)
+        self.position3 = Position("Hangar C", [self.need1], capacity=1)
+        positions = [self.position1, self.position2, self.position3]
         t0 = self.date1
         self.problem = Problem(jobs, positions, t0)

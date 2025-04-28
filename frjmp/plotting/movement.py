@@ -4,7 +4,7 @@ from matplotlib.ticker import MaxNLocator
 
 
 def plot_cumulative_movements(
-    movement_vars,
+    aircraft_movement_vars,
     solver,
     ax,
     x_vals: List,
@@ -18,7 +18,7 @@ def plot_cumulative_movements(
     whenever a movement is detected at a given time step.
 
     Args:
-        movement_vars: Dict[aircraft_name][t_idx] -> BoolVar indicating movement.
+        aircraft_movement_vars: Dict[aircraft_name][t_idx] -> BoolVar indicating movement.
         solver: OR-Tools solver with values assigned after solving.
         ax: Matplotlib Axes object to draw the plot on.
         x_vals: List of time step values (either compressed indices or real dates),
@@ -37,11 +37,11 @@ def plot_cumulative_movements(
     time_indices = [t for t, _ in enumerate(x_vals)]
     max_total = 0
 
-    for aircraft_name in sorted(movement_vars.keys()):
+    for aircraft_name in sorted(aircraft_movement_vars.keys()):
         cumulative = []
         total = 0
         for t in time_indices:
-            var = movement_vars[aircraft_name].get(t)
+            var = aircraft_movement_vars[aircraft_name].get(t)
             if var is not None:
                 total += solver.Value(var)
             cumulative.append(total)
@@ -64,7 +64,7 @@ def plot_cumulative_movements(
     # Legend
     handles = [
         plt.Line2D([0], [0], color=color_map[name], lw=2, label=name)
-        for name in sorted(movement_vars.keys())
+        for name in sorted(aircraft_movement_vars.keys())
     ]
     ax.legend(handles=handles, title="Aircraft")
 

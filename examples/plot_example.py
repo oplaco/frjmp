@@ -28,7 +28,7 @@ def plot_solution(problem, solver):
     )
 
     plot_cumulative_movements(
-        movement_vars=problem.movement_vars,
+        aircraft_movement_vars=problem.aircraft_movement_vars,
         solver=solver,
         ax=axs[1],
         x_vals=x_vals,

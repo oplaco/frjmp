@@ -1,6 +1,7 @@
 import unittest
 from datetime import date
 from ortools.sat.python import cp_model
+from frjmp.model.parameters.movement_dependency import MovementDependency
 from frjmp.model.sets.aircraft import Aircraft
 from frjmp.model.sets.phase import Phase
 from frjmp.model.sets.need import Need
@@ -36,7 +37,7 @@ class TestMovementConstraint(unittest.TestCase):
     def create_local_problem(self):
         """Create the optimization problem resembling the frjmp.project.Problem object but with ONLY the necessary constraints and variables."""
         self.model = cp_model.CpModel()
-        self.movement_vars = create_aircraft_movement_variables(
+        self.aircraft_movement_vars = create_aircraft_movement_variables(
             self.model, self.jobs, self.time_step_indexes
         )
         self.assigned_vars = create_assignment_variables(
@@ -50,10 +51,11 @@ class TestMovementConstraint(unittest.TestCase):
         add_movement_detection_constraints(
             self.model,
             self.assigned_vars,
-            self.movement_vars,
+            self.aircraft_movement_vars,
             self.jobs,
             num_positions=len(self.positions),
             num_timesteps=len(self.time_step_indexes),
+            movement_dependency=MovementDependency(),  # Empty mock dependency
         )
 
     def test_movement_detected_when_position_changes_same_job(self):
@@ -68,10 +70,10 @@ class TestMovementConstraint(unittest.TestCase):
         status = solver.Solve(self.model)
 
         self.assertEqual(
-            solver.Value(self.movement_vars[self.aircraft.name][0]), 0
+            solver.Value(self.aircraft_movement_vars[self.aircraft.name][0]), 0
         )  # No movement at t0
         self.assertEqual(
-            solver.Value(self.movement_vars[self.aircraft.name][1]), 1
+            solver.Value(self.aircraft_movement_vars[self.aircraft.name][1]), 1
         )  # Should detect movement at t1
 
     def test_movement_detected_when_position_changes_different_job(self):
@@ -88,10 +90,10 @@ class TestMovementConstraint(unittest.TestCase):
         status = solver.Solve(self.model)
 
         self.assertEqual(
-            solver.Value(self.movement_vars[self.aircraft.name][2]), 1
+            solver.Value(self.aircraft_movement_vars[self.aircraft.name][2]), 1
         )  # Should detect movement at t2
         self.assertEqual(
-            solver.Value(self.movement_vars[self.aircraft.name][0]), 0
+            solver.Value(self.aircraft_movement_vars[self.aircraft.name][0]), 0
         )  # No movement at t0
 
 
