@@ -34,6 +34,7 @@ class BasicTestSetup(unittest.TestCase):
         self.date4 = date(2025, 3, 4)
 
         self.aircraft_model = AircraftModel("C295")
+        self.aircraft_models = [self.aircraft_model]
         self.aircraft1 = Aircraft("MSN 001", self.aircraft_model)
         self.aircraft2 = Aircraft("MSN 002", self.aircraft_model)
         self.aircraft3 = Aircraft("MSN 003", self.aircraft_model)
@@ -51,4 +52,4 @@ class ProblemTestSetup(BasicTestSetup):
         self.position3 = Position("Hangar C", [self.need1], capacity=1)
         positions = [self.position1, self.position2, self.position3]
         t0 = self.date1
-        self.problem = Problem(jobs, positions, t0)
+        self.problem = Problem(self.aircraft_models, jobs, positions, t0)

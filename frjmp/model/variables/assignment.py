@@ -24,7 +24,7 @@ def create_assignment_variables(
         compatible_positions = [
             p_idx
             for p_idx, pos in enumerate(positions)
-            if can_position_handle_phase(pos, job.phase)
+            if can_position_cover_phase_needs(pos, job.phase)
         ]
         if not compatible_positions:
             raise ValueError(
@@ -41,6 +41,6 @@ def create_assignment_variables(
     return assigned_vars
 
 
-def can_position_handle_phase(position: Position, phase: Phase):
+def can_position_cover_phase_needs(position: Position, phase: Phase):
     position_need_names = {need.name for need in position.available_needs}
     return phase.required_need.name in position_need_names

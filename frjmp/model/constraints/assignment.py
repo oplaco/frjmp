@@ -21,11 +21,13 @@ def add_job_assignment_constraints(
     """
     for j_idx, job in enumerate(jobs):
         for t_date in compressed_dates:
+            # Only create assignment variables inside its job time domain (outside we already now they are 0).
             if job.start <= t_date <= job.end:
                 t_idx = date_to_index[t_date]
                 assign_vars = []
 
                 for p_idx, position in enumerate(positions):
+                    # Only create assignment variables for those positions where the job needs can be covered.
                     if (
                         p_idx in assigned_vars.get(j_idx, {})
                         and t_idx in assigned_vars[j_idx][p_idx]

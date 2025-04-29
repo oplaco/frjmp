@@ -7,11 +7,16 @@ from frjmp.model.variables.movement import (
     create_aircraft_movement_variables,
     create_movement_in_position_variables,
 )
+from frjmp.model.variables.pattern_assignment import create_pattern_assignment_variables
 from frjmp.model.constraints.assignment import add_job_assignment_constraints
 from frjmp.model.constraints.capacity import add_position_capacity_constraints
 from frjmp.model.constraints.movement import add_movement_detection_constraints
 from frjmp.model.objective_function import minimize_total_movements
 from frjmp.model.parameters.movement_dependency import MovementDependency
+from frjmp.model.parameters.position_aircraft_model import (
+    PositionsAircraftModelDependency,
+)
+from frjmp.model.sets.aircraft import AircraftModel
 from frjmp.model.sets.job import Job
 from frjmp.model.sets.position import Position
 from frjmp.utils.timeline_utils import compress_dates, trim_jobs_before_t0_inplace
@@ -23,9 +28,14 @@ from frjmp.utils.validation_utils import (
 
 class Problem:
     def __init__(
-        self, jobs: list[Job], positions: list[Position], t0: date = date.today()
+        self,
+        aircraft_models: list[AircraftModel],
+        jobs: list[Job],
+        positions: list[Position],
+        t0: date = date.today(),
     ):
         # Sets
+        self.aircraft_models = aircraft_models
         self.jobs = jobs
         self.positions = positions
         self.t0 = t0
@@ -33,6 +43,9 @@ class Problem:
             []
         )  # List of (var, value) of fixed variables. This can be used for initial or contour conditions.
         self.movement_dependency = MovementDependency(positions=positions)
+        self.pos_aircraft_model_dependency = PositionsAircraftModelDependency(
+            aircraft_models, positions
+        )
 
         # --- Pre-processing ---#
         trim_jobs_before_t0_inplace(jobs, t0)
@@ -69,6 +82,15 @@ class Problem:
         )
         self.movement_in_position_vars = create_movement_in_position_variables(
             self.model, self.positions, self.time_step_indexes
+        )
+
+        self.a = create_pattern_assignment_variables(
+            self.model,
+            self.jobs,
+            self.compressed_dates,
+            self.date_to_index,
+            self.pos_aircraft_model_dependency,
+            self.aircraft_models,
         )
 
     def add_constraints(self):

@@ -7,7 +7,7 @@ if __name__ == "__main__":
 from datetime import date, timedelta
 from frjmp.model.sets.need import Need
 from frjmp.model.sets.phase import Phase
-from frjmp.model.sets.aircraft import Aircraft
+from frjmp.model.sets.aircraft import Aircraft, AircraftModel
 from frjmp.model.sets.position import Position
 from frjmp.model.sets.job import Job
 from frjmp.model.problem import Problem
@@ -25,8 +25,11 @@ foury_phase = Phase("4Y", wp_need)
 waiting_phase = Phase("WAITING", wp_need)
 
 # Create Aircraft
-a1 = Aircraft("185")
-a2 = Aircraft("187")
+c295 = AircraftModel("C295")
+a400m = AircraftModel("A400M")
+aircraft_models = [c295, a400m]
+a1 = Aircraft("185", c295)
+a2 = Aircraft("187", a400m)
 
 # T0
 t0 = date(2025, 4, 15)
@@ -47,7 +50,7 @@ positions = [posA, posB]
 
 
 # Initialize Problem
-problem = Problem(jobs, positions, t0)
+problem = Problem(aircraft_models, jobs, positions, t0)
 
 
 # Solve

@@ -102,7 +102,6 @@ def add_aircraft_movement_constraint(
                 model.AddMaxEquality(aircraft_movement_vars[aircraft_name][t], diffs)
 
                 # ENFORCE: movement → any diff
-                print(diffs)
                 model.AddBoolOr(diffs).OnlyEnforceIf(
                     aircraft_movement_vars[aircraft_name][t]
                 )
@@ -121,9 +120,6 @@ def add_movement_dependency_constraints(
                     try:
                         var_from = movement_in_position_vars[from_idx][t]
                         var_to = movement_in_position_vars[to_idx][t]
-                        print(
-                            f"{movement_in_position_vars[from_idx][t]} triggers {movement_in_position_vars[to_idx][t]}"
-                        )
                         model.AddImplication(var_from, var_to)
                     except KeyError:
                         print("Invalid entrance in add_movement_dependency_constraints")
