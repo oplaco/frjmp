@@ -84,7 +84,7 @@ class Problem:
             self.model, self.positions, self.time_step_indexes
         )
 
-        self.a = create_pattern_assignment_variables(
+        self.pattern_assigned_vars = create_pattern_assignment_variables(
             self.model,
             self.jobs,
             self.compressed_dates,
@@ -102,11 +102,14 @@ class Problem:
         add_job_assignment_constraints(
             self.model,
             self.assigned_vars,
+            self.pattern_assigned_vars,
             self.jobs,
             self.positions,
             self.date_to_index,
             self.time_step_indexes,
+            self.pos_aircraft_model_dependency,
         )
+
         add_movement_detection_constraints(
             self.model,
             self.assigned_vars,

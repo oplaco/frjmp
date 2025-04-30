@@ -10,6 +10,8 @@ class Pattern:
     """
 
     def __init__(self, positions: list[Position]):
+        if len(positions) != len(set(positions)):
+            raise ValueError("All positions in a Pattern must be unique.")
         self.positions = positions
 
 

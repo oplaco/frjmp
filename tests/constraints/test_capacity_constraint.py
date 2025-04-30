@@ -5,8 +5,6 @@ from ortools.sat.python import cp_model
 
 from frjmp.model.constraints.assignment import add_job_assignment_constraints
 from frjmp.model.constraints.capacity import add_position_capacity_constraints
-from frjmp.model.constraints.movement import add_movement_detection_constraints
-from frjmp.model.parameters.movement_dependency import MovementDependency
 from frjmp.model.parameters.position_aircraft_model import (
     PositionsAircraftModelDependency,
 )
@@ -28,11 +26,17 @@ class TestMovementConstraint(unittest.TestCase):
     def setUp(self):
         self.aircraft_model1 = AircraftModel("C295")
         self.aircraft_models = [self.aircraft_model1]
-        self.aircraft = Aircraft("AC1", self.aircraft_model1)
+        self.aircraft1 = Aircraft("AC1", self.aircraft_model1)
+        self.aircraft2 = Aircraft("AC2", self.aircraft_model1)
         self.need = Need("repair")
         self.phase = Phase("repair-phase", self.need)
-        self.job1 = Job(self.aircraft, self.phase, date(2025, 4, 10), date(2025, 4, 12))
-        self.job2 = Job(self.aircraft, self.phase, date(2025, 4, 13), date(2025, 4, 20))
+
+        self.job1 = Job(
+            self.aircraft1, self.phase, date(2025, 4, 10), date(2025, 4, 15)
+        )
+        self.job2 = Job(
+            self.aircraft2, self.phase, date(2025, 4, 10), date(2025, 4, 15)
+        )
         self.jobs = [self.job1, self.job2]
 
         self.pos1 = Position("Hangar A", [self.need], capacity=1)
@@ -79,7 +83,7 @@ class TestMovementConstraint(unittest.TestCase):
             self.aircraft_models,
         )
 
-        # Add basic constraints
+        # Add basic assigment constraints.
         add_job_assignment_constraints(
             self.model,
             self.assigned_vars,
@@ -91,17 +95,7 @@ class TestMovementConstraint(unittest.TestCase):
             pos_aircraft_model_dependency,
         )
 
-        add_movement_detection_constraints(
-            self.model,
-            self.assigned_vars,
-            self.aircraft_movement_vars,
-            self.movement_in_position_vars,
-            self.jobs,
-            num_positions=len(self.positions),
-            num_timesteps=len(self.time_step_indexes),
-            movement_dependency=MovementDependency(),  # Empty mock dependency
-        )
-
+        # Add capacity constraint that needs assigment constraint to make sense.
         add_position_capacity_constraints(
             self.model,
             self.assigned_vars,
@@ -110,44 +104,29 @@ class TestMovementConstraint(unittest.TestCase):
             num_timesteps=len(self.time_step_indexes),
         )
 
-    def test_movement_detected_when_position_changes_same_job(self):
+    def test_capacity_constraint_surpass(self):
         self.create_local_problem()
-        # To isolate the movement constraint. Fake the other crucial constraint, the assigment constraint by setting some values.
-        # Move assign aircraft 0 to pos1 in t0 and in pos2 in t1 and t2.
-        self.model.Add(self.assigned_vars[0][0][0] == 1)  # t0 = pos1
-        self.model.Add(self.assigned_vars[0][0][1] == 0)
-        self.model.Add(self.assigned_vars[0][1][1] == 1)  # t1 = pos2
+        # Create two assigments of different jobs in the same position and time step. Hence surpassing the position capacity.
+        self.model.Add(self.assigned_vars[0][0][0] == 1)
+        self.model.Add(self.assigned_vars[1][0][0] == 1)
 
         solver = cp_model.CpSolver()
         status = solver.Solve(self.model)
 
-        self.assertEqual(
-            solver.Value(self.aircraft_movement_vars[self.aircraft.name][0]), 0
-        )  # No movement at t0
-        self.assertEqual(
-            solver.Value(self.aircraft_movement_vars[self.aircraft.name][1]), 1
-        )  # Should detect movement at t1
+        # The problem proves to be unfeasible
+        self.assertEqual(status, cp_model.INFEASIBLE)
 
-    def test_movement_detected_when_position_changes_different_job(self):
+    def test_capacity_constraint_valid(self):
+        # Increasing default the capacity of position 1 to 2.
+        self.pos1.capacity = 2
         self.create_local_problem()
-        # To isolate the movement constraint. Fake the other crucial constraint, the assigment constraint by setting some values.
-        # Movement between job1 and job2 from pos1 in t1 to pos2 in t3.
-        self.model.Add(self.assigned_vars[0][0][0] == 1)  # t0 = pos1
-        self.model.Add(self.assigned_vars[0][0][1] == 1)  # t1 = pos1
 
-        self.model.Add(self.assigned_vars[1][1][2] == 1)  # t2 = pos2
-        self.model.Add(self.assigned_vars[1][1][3] == 1)  # t3 = pos2
+        # Create two assigments of different jobs in the same position and time step.
+        self.model.Add(self.assigned_vars[0][0][0] == 1)
+        self.model.Add(self.assigned_vars[1][0][0] == 1)
 
         solver = cp_model.CpSolver()
         status = solver.Solve(self.model)
 
-        self.assertEqual(
-            solver.Value(self.aircraft_movement_vars[self.aircraft.name][2]), 1
-        )  # Should detect movement at t2
-        self.assertEqual(
-            solver.Value(self.aircraft_movement_vars[self.aircraft.name][0]), 0
-        )  # No movement at t0
-
-
-if __name__ == "__main__":
-    unittest.main()
+        # The problem can be solved with optimal results.
+        self.assertEqual(status, cp_model.OPTIMAL)
