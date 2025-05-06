@@ -125,30 +125,38 @@ class TestMovementConstraint(unittest.TestCase):
         self.assertEqual(
             solver.Value(self.aircraft_movement_vars[self.aircraft.name][0]), 0
         )  # No movement at t0
+        # Should detect movement at t1
         self.assertEqual(
             solver.Value(self.aircraft_movement_vars[self.aircraft.name][1]), 1
-        )  # Should detect movement at t1
+        )
+        self.assertEqual(solver.Value(self.movement_in_position_vars[1][1]), 1)
 
     def test_movement_detected_when_position_changes_different_job(self):
         self.create_local_problem()
         # To isolate the movement constraint. Fake the other crucial constraint, the assigment constraint by setting some values.
+        previous_pos_idx = 0
+        after_pos_idx = 1
         # Movement between job1 and job2 from pos1 in t1 to pos2 in t3.
-        self.model.Add(self.assigned_vars[0][0][0] == 1)  # t0 = pos1
-        self.model.Add(self.assigned_vars[0][0][1] == 1)  # t1 = pos1
+        self.model.Add(self.assigned_vars[0][previous_pos_idx][0] == 1)  # t0 = pos1
+        self.model.Add(self.assigned_vars[0][previous_pos_idx][1] == 1)  # t1 = pos1
 
-        self.model.Add(self.assigned_vars[1][1][2] == 1)  # t2 = pos2
-        self.model.Add(self.assigned_vars[1][1][3] == 1)  # t3 = pos2
+        self.model.Add(self.assigned_vars[1][after_pos_idx][2] == 1)  # t2 = pos2
+        self.model.Add(self.assigned_vars[1][after_pos_idx][3] == 1)  # t3 = pos2
 
         solver = cp_model.CpSolver()
         status = solver.Solve(self.model)
 
+        # Should detect movement at t2
         self.assertEqual(
             solver.Value(self.aircraft_movement_vars[self.aircraft.name][2]), 1
-        )  # Should detect movement at t2
+        )
         self.assertEqual(
-            solver.Value(self.aircraft_movement_vars[self.aircraft.name][0]), 0
-        )  # No movement at t0
-
-
-if __name__ == "__main__":
-    unittest.main()
+            solver.Value(self.movement_in_position_vars[after_pos_idx][2]), 1
+        )
+        # No movement at t1
+        self.assertEqual(
+            solver.Value(self.aircraft_movement_vars[self.aircraft.name][1]), 0
+        )
+        self.assertEqual(
+            solver.Value(self.movement_in_position_vars[after_pos_idx][1]), 0
+        )

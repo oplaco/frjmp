@@ -31,7 +31,9 @@ def create_assignment_variables(
                 f"No compatible position found for job {j_idx} ({job.aircraft.name}, phase={job.phase.name})"
             )
 
-        # Safely loop over compatible positions only
+        # To reduce variable amount:
+        # - For each job and time step create assignments only for positions that can meet the job needs (compatible_positions).
+        # - For each job and compatible position create assignments only for time steps in active_time_indices.
         for p_idx in compatible_positions:
             assigned_vars[j_idx][p_idx] = {}
             for t_idx in active_time_indices:

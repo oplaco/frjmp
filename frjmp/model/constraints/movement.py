@@ -3,6 +3,7 @@ from frjmp.model.sets.job import Job
 from collections import defaultdict
 from ortools.sat.python import cp_model
 from typing import Dict
+from collections import defaultdict
 
 
 def add_movement_detection_constraints(
@@ -57,8 +58,6 @@ def add_aircraft_movement_constraint(
     - Ensures that if a movement is forced at t, then the position must change.
     """
 
-    from collections import defaultdict
-
     # Group job indices by aircraft
     aircraft_to_jobs = defaultdict(list)
     for j_idx, job in enumerate(jobs):
@@ -73,6 +72,7 @@ def add_aircraft_movement_constraint(
                 x_curr_terms = []
 
                 for j_idx in job_indices:
+                    # Note: We only include vars that were actually created (Remember assignments do not exist outside active time indexes, x_prev for start date is None)
                     x_prev = assigned_vars.get(j_idx, {}).get(p_idx, {}).get(t - 1)
                     x_curr = assigned_vars.get(j_idx, {}).get(p_idx, {}).get(t)
 
@@ -81,21 +81,19 @@ def add_aircraft_movement_constraint(
                     if x_curr is not None:
                         x_curr_terms.append(x_curr)
 
-                if x_prev_terms and x_curr_terms:
-                    x_prev_sum = model.NewIntVar(
-                        0, len(x_prev_terms), f"{aircraft_name}_p{p_idx}_prev_sum_t{t}"
-                    )
-                    x_curr_sum = model.NewIntVar(
-                        0, len(x_curr_terms), f"{aircraft_name}_p{p_idx}_curr_sum_t{t}"
-                    )
-                    model.Add(x_prev_sum == sum(x_prev_terms))
-                    model.Add(x_curr_sum == sum(x_curr_terms))
+                # If no terms exist for both prev and curr, skip this position
+                if not x_prev_terms and not x_curr_terms:
+                    continue
 
-                    # diff = 1 if prev ≠ curr
-                    diff = model.NewBoolVar(f"diff_{aircraft_name}_p{p_idx}_t{t}")
-                    model.Add(x_prev_sum != x_curr_sum).OnlyEnforceIf(diff)
-                    model.Add(x_prev_sum == x_curr_sum).OnlyEnforceIf(diff.Not())
-                    diffs.append(diff)
+                # Safe: If only prev or curr exists, treat missing as 0
+                x_prev_sum = sum(x_prev_terms) if x_prev_terms else model.NewConstant(0)
+                x_curr_sum = sum(x_curr_terms) if x_curr_terms else model.NewConstant(0)
+
+                # Create a bool diff = 1 if usage changed for this position
+                diff = model.NewBoolVar(f"diff_{aircraft_name}_p{p_idx}_t{t}")
+                model.Add(x_prev_sum != x_curr_sum).OnlyEnforceIf(diff)
+                model.Add(x_prev_sum == x_curr_sum).OnlyEnforceIf(diff.Not())
+                diffs.append(diff)
 
             if diffs:
                 # DETECT: any diff → movement
