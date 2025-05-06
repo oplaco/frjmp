@@ -14,4 +14,6 @@ def minimize_total_movements(
         for var in time_dict.values():
             all_moves.append(var)
 
-    model.Minimize(sum(all_moves))
+    total_movements = sum(all_moves)
+    model.Minimize(total_movements)
+    return total_movements

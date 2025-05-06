@@ -110,7 +110,6 @@ def add_movement_dependency_constraints(
 ):
     dependency_matrix, index_map = movement_dependency.generate_matrix()
     size = len(dependency_matrix)
-
     for from_idx in range(size):
         for to_idx in range(size):
             if dependency_matrix[from_idx][to_idx] == 1:
@@ -120,8 +119,10 @@ def add_movement_dependency_constraints(
                         var_to = movement_in_position_vars[to_idx][t]
                         model.AddImplication(var_from, var_to)
                     except KeyError:
-                        print("Invalid entrance in add_movement_dependency_constraints")
-                        continue  # skip invalid entries
+                        raise ValueError(
+                            "Invalid entrance in add_movement_dependency_constraints"
+                        )
+                        # continue  # skip invalid entries
 
 
 def link_aircraft_movements_to_position_movements(
@@ -142,16 +143,33 @@ def link_aircraft_movements_to_position_movements(
         aircraft_movement_vars: Dict[aircraft_name][t] → BoolVar
         jobs: List of Job objects
     """
-    for j_idx, job in enumerate(jobs):
-        aircraft_name = job.aircraft.name
-        for p_idx in assigned_vars.get(j_idx, {}):
-            for t_idx in assigned_vars[j_idx][p_idx]:
-                is_assigned = assigned_vars[j_idx][p_idx][t_idx]
-                aircraft_moved = aircraft_movement_vars[aircraft_name][t_idx]
-                pos_moved = movement_in_position_vars[p_idx][t_idx]
-                # If both is_assigned and aircraft_moved then pos_moved ==1
-                model.Add(pos_moved == 1).OnlyEnforceIf([is_assigned, aircraft_moved])
-                # If both is_assigned and aircraft_moved is not moved then pos_moved == 0
-                model.Add(pos_moved == 0).OnlyEnforceIf(
-                    [is_assigned, aircraft_moved.Not()]
-                )
+    for p_idx in movement_in_position_vars:
+        for t_idx in movement_in_position_vars[p_idx]:
+            triggers = []
+
+            for j_idx, job in enumerate(jobs):
+                if (
+                    p_idx in assigned_vars.get(j_idx, {})
+                    and t_idx in assigned_vars[j_idx][p_idx]
+                ):
+                    is_assigned = assigned_vars[j_idx][p_idx][t_idx]
+                    aircraft_moved = aircraft_movement_vars[job.aircraft.name][t_idx]
+
+                    # trigger_var = is_assigned AND aircraft_moved
+                    trigger_var = model.NewBoolVar(
+                        f"trigger_p{p_idx}_t{t_idx}_j{j_idx}"
+                    )
+                    model.AddBoolAnd([is_assigned, aircraft_moved]).OnlyEnforceIf(
+                        trigger_var
+                    )
+                    model.AddBoolOr(
+                        [is_assigned.Not(), aircraft_moved.Not()]
+                    ).OnlyEnforceIf(trigger_var.Not())
+                    triggers.append(trigger_var)
+
+            if triggers:
+                # If any aircraft that was assigned here moved, the position moved
+                model.AddMaxEquality(movement_in_position_vars[p_idx][t_idx], triggers)
+            else:
+                # No job is even assigned here → movement must be 0
+                model.Add(movement_in_position_vars[p_idx][t_idx] == 0)

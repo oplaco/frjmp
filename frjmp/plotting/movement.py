@@ -61,11 +61,16 @@ def plot_cumulative_movements(
     ax.set_yticks(list(range(0, max_total + 2)))
     ax.set_xlabel("Date" if use_real_dates else "Time Step")
 
-    # Legend
-    handles = [
-        plt.Line2D([0], [0], color=color_map[name], lw=2, label=name)
-        for name in sorted(aircraft_movement_vars.keys())
-    ]
-    ax.legend(handles=handles, title="Aircraft")
+    # # Add legend based on color map
+    # handles = [
+    #     plt.Line2D([0], [0], color=color_map[name], lw=2, label=name)
+    #     for name in color_map
+    # ]
+    # ax.legend(
+    #     handles=handles,
+    #     title="Aircraft",
+    #     loc="upper right",
+    #     ncol=4,
+    # )
 
     return fig, ax

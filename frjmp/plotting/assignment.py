@@ -88,11 +88,16 @@ def plot_assignment_gantt(
     ax.set_yticklabels(y_labels)
     ax.set_title("Aircraft Positioning Gantt Chart")
 
-    # Add legend based on color map
-    handles = [
-        plt.Line2D([0], [0], color=color_map[name], lw=2, label=name)
-        for name in color_map
-    ]
-    ax.legend(handles=handles, title="Aircraft")
+    # # Add legend based on color map
+    # handles = [
+    #     plt.Line2D([0], [0], color=color_map[name], lw=2, label=name)
+    #     for name in color_map
+    # ]
+    # ax.legend(
+    #     handles=handles,
+    #     title="Aircraft",
+    #     loc="upper right",
+    #     ncol=4,
+    # )
 
     return fig, ax

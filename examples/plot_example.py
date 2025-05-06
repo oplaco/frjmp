@@ -36,5 +36,19 @@ def plot_solution(problem, solver):
         use_real_dates=use_real_dates,
     )
 
+    # 5. Create a shared legend
+    handles = [
+        plt.Line2D([0], [0], color=color_map[name], lw=4, label=name)
+        for name in aircraft_names
+    ]
+    fig.legend(
+        handles=handles,
+        title="Aircraft",
+        loc="upper right",
+        ncol=5,
+        fontsize="small",
+        title_fontsize="small",
+    )
+
     plt.tight_layout()
     plt.show()

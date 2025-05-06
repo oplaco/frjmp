@@ -126,3 +126,25 @@ def trim_jobs_before_t0_inplace(jobs: List[Job], t0: date) -> None:
 
     jobs.clear()
     jobs.extend(valid_job)
+
+
+def trim_jobs_after_last_t_inplace(jobs: List[Job], last_t: date) -> None:
+    """
+    Modifies the given list of jobs in-place:
+    - Removes jobs that start after last_t
+    - Adjusts end date of jobs that overlap last_t
+
+    Args:
+        jobs: List of Job objects (modified in place).
+        last_t: End of planning horizon.
+    """
+    valid_jobs = []
+    for job in jobs:
+        if job.start > last_t:
+            continue  # Drop it
+        if job.start <= last_t < job.end:
+            job.end = last_t  # Trim end date
+        valid_jobs.append(job)
+
+    jobs.clear()
+    jobs.extend(valid_jobs)

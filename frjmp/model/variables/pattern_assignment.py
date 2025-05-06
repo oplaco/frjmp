@@ -67,11 +67,11 @@ def create_pattern_assignment_variables(
                             and t_idx in assigned_vars[j_idx][p_idx]
                         )
                     ]
-                    warnings.warn(
-                        f"Skipped pattern {k_idx} for Job {job} (AircraftModel={job.aircraft.model}) at t={t_idx}: "
-                        f"positions {incompatible_pos_names} do not cover job need ({job.phase.required_need}).",
-                        stacklevel=2,
-                    )
+                    # warnings.warn(
+                    #     f"Skipped pattern {k_idx} for Job {job} (AircraftModel={job.aircraft.model}) at t={t_idx}: "
+                    #     f"positions {incompatible_pos_names} do not cover job need ({job.phase.required_need}).",
+                    #     stacklevel=2,
+                    # )
                     continue
 
                 # Create variable only if the pattern is fully compatible with the job
