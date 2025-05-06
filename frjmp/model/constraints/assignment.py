@@ -20,6 +20,11 @@ def add_job_assignment_constraints(
 ):
     """
     Link pattern assignment variables to position assignment variables.
+    - All the jobs must be assigned to at least one pattern in each time step.
+    - If a job is assigned to a pattern (pattern_assigned_vars), the job must
+        be assigned (assigned_var) to all the positions belonging to that pattern.
+        This can raise a ValueError if the pattern contains a position that does
+        not cover the job phase need.
     """
     matrix = dependency.generate_matrix()
     aircraft_models = dependency.aircraft_models
@@ -36,18 +41,24 @@ def add_job_assignment_constraints(
 
             # 1. ExactlyOne over pattern_assigned_vars[j][t]
             model.AddExactlyOne(list(pattern_assigned_vars[j_idx][t_idx].values()))
-            # 2. Link assigned_vars[j][p][t] to pattern selection.
+
+            # 2. Link assigned_vars[j][p][t] to pattern selection (pattern_assigned_vars).
             for p_idx, _ in enumerate(positions):
                 a_var = assigned_vars.get(j_idx, {}).get(p_idx, {}).get(t_idx, None)
 
+                if a_var is None:
+                    # For the moment I dont think it makes sense to raise and error. If a job cant be done in a position because the latter
+                    # does not cover it needs, the variable wont be created (to save memory and time). If this position cant host the job we
+                    # cant expect either the pattern to be able to do so. Since patterns are related to aircrafts and needs to jobs we cant
+                    # directly not create pattern_assigment_vars as well as assigment_vars.
+                    continue
+                    # raise ValueError(
+                    #     f"Pattern {k_idx} expects position {positions[p_idx]} for job {jobs[j_idx]} at time {t_idx}, "
+                    #     f"but no assigned_var exists. Check either patterns or compatible positions (if needs are covered by the position)."
+                    # )
                 terms = []
                 for k_idx in range(n_patterns):
                     if matrix[model_idx][k_idx][p_idx] == 1:
-                        if a_var is None:
-                            raise ValueError(
-                                f"Pattern {k_idx} expects position {p_idx} for job {j_idx} at time {t_idx}, "
-                                f"but no assigned_var exists. Check either patterns or compatible positions (if needs are covered by the position)."
-                            )
                         terms.append(pattern_assigned_vars[j_idx][t_idx][k_idx])
 
                 if a_var is not None:

@@ -91,6 +91,7 @@ class Problem:
             self.date_to_index,
             self.pos_aircraft_model_dependency,
             self.aircraft_models,
+            self.assigned_vars,
         )
 
     def add_constraints(self):

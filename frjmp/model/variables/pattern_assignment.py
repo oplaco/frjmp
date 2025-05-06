@@ -6,6 +6,7 @@ from frjmp.model.parameters.position_aircraft_model import (
 from frjmp.model.sets.aircraft import AircraftModel
 from datetime import date
 from frjmp.utils.timeline_utils import get_active_time_indices
+import warnings
 
 
 def create_pattern_assignment_variables(
@@ -15,10 +16,14 @@ def create_pattern_assignment_variables(
     date_to_index: dict[date, int],
     dependency: PositionsAircraftModelDependency,
     aircraft_models: list[AircraftModel],
+    assigned_vars,
 ):
     """
-    Create Boolean variables pattern_assigned_vars[j][t][k] that select the pattern k
-    for job j at time step t.
+    Create Boolean variables pattern_assigned_vars[j][t][k] that select pattern k
+    for job j at time step t — but only if the pattern is valid for that job at that time.
+
+    A pattern is considered valid if all positions it uses are compatible with the job's needs.
+    This is determined by checking whether an assigned_var[j][p][t] exists.
     """
     pattern_assigned_vars = {}
     matrix = dependency.generate_matrix()
@@ -38,6 +43,38 @@ def create_pattern_assignment_variables(
             pattern_assigned_vars[j_idx][t_idx] = {}
 
             for k_idx in range(n_patterns):
+                # Extract all positions used by this pattern
+                pattern_positions = [
+                    p_idx
+                    for p_idx, uses in enumerate(matrix[model_idx][k_idx])
+                    if uses == 1
+                ]
+
+                # Check if all these positions have a valid assigned_var[j][p][t]
+                pattern_is_valid = all(
+                    p_idx in assigned_vars.get(j_idx, {})
+                    and t_idx in assigned_vars[j_idx][p_idx]
+                    for p_idx in pattern_positions
+                )
+
+                if not pattern_is_valid:
+                    # Skip this pattern for this job at this time — not all positions are compatible
+                    incompatible_pos_names = [
+                        dependency.available_positions[p_idx].name
+                        for p_idx in pattern_positions
+                        if not (
+                            p_idx in assigned_vars.get(j_idx, {})
+                            and t_idx in assigned_vars[j_idx][p_idx]
+                        )
+                    ]
+                    warnings.warn(
+                        f"Skipped pattern {k_idx} for Job {job} (AircraftModel={job.aircraft.model}) at t={t_idx}: "
+                        f"positions {incompatible_pos_names} do not cover job need ({job.phase.required_need}).",
+                        stacklevel=2,
+                    )
+                    continue
+
+                # Create variable only if the pattern is fully compatible with the job
                 y_var = model.NewBoolVar(
                     f"pattern_assigned_j{j_idx}_t{t_idx}_pat{k_idx}"
                 )
