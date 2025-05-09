@@ -165,11 +165,11 @@ def link_aircraft_movements_to_position_movements(
                             ac_mov, movement_in_position_vars[p][t]
                         ).OnlyEnforceIf(assigned)
 
-    # BACKWARD: movement in p at t + assignment to p at t → ac_mov
-    for j in job_idxs:
-        for p, t_dict in assigned_vars.get(j, {}).items():
-            if t in t_dict:
-                assigned = assigned_vars[j][p][t]
-                pos_mov = movement_in_position_vars[p][t]
-                # (assigned AND pos_mov) ⇒ ac_mov
-                model.AddBoolOr([assigned.Not(), pos_mov.Not(), ac_mov])
+            # BACKWARD: movement in p at t + assignment to p at t → ac_mov
+            for j in job_idxs:
+                for p, t_dict in assigned_vars.get(j, {}).items():
+                    if t in t_dict:
+                        assigned = assigned_vars[j][p][t]
+                        pos_mov = movement_in_position_vars[p][t]
+                        # (assigned AND pos_mov) ⇒ ac_mov
+                        model.AddBoolOr([assigned.Not(), pos_mov.Not(), ac_mov])

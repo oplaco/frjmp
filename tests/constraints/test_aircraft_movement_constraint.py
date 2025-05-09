@@ -33,7 +33,7 @@ class TestMovementConstraint(unittest.TestCase):
         self.aircraft_model1 = AircraftModel("C295")
         self.aircraft_models = [self.aircraft_model1]
         self.aircraft = Aircraft("AC1", self.aircraft_model1)
-        self.aircraft2 = Aircraft("AC1", self.aircraft_model1)
+        self.aircraft2 = Aircraft("AC2", self.aircraft_model1)
         self.need = Need("repair")
         self.phase1 = Phase("repair-phase-1", self.need)
         self.phase2 = Phase("repair-phase-2", self.need)
@@ -272,16 +272,23 @@ class TestMovementConstraint(unittest.TestCase):
         self.create_local_problem()
 
         # Create position movement assigment and pattern assignments.
-        t_idx = 0
+        t0_idx = 0
         aircraft_name = self.aircraft.name
-        self.model.Add(self.pattern_assigned_vars[0][t_idx][1] == 1)
-        # self.model.Add(self.pattern_assigned_vars[0][t_idx + 1][1] == 1)
-        self.model.Add(self.movement_in_position_vars[0][t_idx] == 1)
-        self.model.Add(self.movement_in_position_vars[1][t_idx] == 1)
+        source_pattern_idx = 0
+        target_pattern_idx = 1
+        source_pattern = self.aircraft.model.allowed_patterns[source_pattern_idx]
+        target_pattern = self.aircraft.model.allowed_patterns[target_pattern_idx]
+
+        self.model.Add(self.pattern_assigned_vars[0][t0_idx][source_pattern_idx] == 1)
+        for pos in source_pattern.positions + target_pattern.positions:
+            pos_idx = self.positions.index(pos)
+            self.model.Add(self.movement_in_position_vars[pos_idx][t0_idx] == 1)
 
         solver = cp_model.CpSolver()
         status = solver.Solve(self.model)
 
         self.assertEqual(status, cp_model.OPTIMAL)
         # There is an aircraft movement at t0 as there are two positions movements at t0 and one aircraft is assigned to one of those positions.
-        self.assertEqual(solver.Value(self.aircraft_movement_vars[aircraft_name][0]), 1)
+        self.assertEqual(
+            solver.Value(self.aircraft_movement_vars[aircraft_name][t0_idx]), 1
+        )
