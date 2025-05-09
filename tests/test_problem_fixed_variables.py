@@ -26,7 +26,7 @@ class TestFixedVariableConstraints(ProblemTestSetup):
             self.aircraft1.name, 1
         )
 
-        assingment_a1_t1 = self.problem.add_fixed_assignment(0, 0, 1)
+        assignment_a1_t1 = self.problem.add_fixed_assignment(0, 0, 1)
 
         status, solver = self.problem.solve()
 
@@ -43,8 +43,8 @@ class TestFixedVariableConstraints(ProblemTestSetup):
             solver.Value(movement_a1_t1), 1
         )  # Check fixed aircraft movement in t1.
         self.assertEqual(
-            solver.Value(av[0][0][1]), 1
+            solver.Value(assignment_a1_t1), 1
         )  # Check the fixed assignment at t1.
         self.assertEqual(
-            solver.Value(av[0][0][0]), 0
-        )  # Check that the aircraft was not in p0 at t1-1 as there was a movement for aircraft1 in t1.
+            solver.Value(av[0][0][2]), 0
+        )  # Check that the aircraft was not in p0 at t1+1 as there was a movement for aircraft1 in t2.

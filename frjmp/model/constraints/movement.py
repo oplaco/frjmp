@@ -9,10 +9,10 @@ from collections import defaultdict
 def add_movement_detection_constraints(
     model: cp_model.CpModel,
     assigned_vars: Dict[int, Dict[int, Dict[int, cp_model.IntVar]]],
+    pattern_assigned_vars,
     aircraft_movement_vars: Dict[int, Dict[int, cp_model.IntVar]],
     movement_in_position_vars: Dict[int, Dict[int, cp_model.IntVar]],
     jobs: list[Job],
-    num_positions: int,
     num_timesteps: int,
     movement_dependency: MovementDependency,
 ):
@@ -23,12 +23,11 @@ def add_movement_detection_constraints(
         model: OR-Tools CP model
         assigned_vars: assignment variables [job][position][time]
         aircraft_movement_vars: movement detection variables [job][time]
-        num_positions: number of positions
         num_timesteps: number of time steps
         forced_movements: optional dict specifying forced movement times per job
     """
     add_aircraft_movement_constraint(
-        model, assigned_vars, aircraft_movement_vars, jobs, num_positions, num_timesteps
+        model, pattern_assigned_vars, aircraft_movement_vars, jobs, num_timesteps
     )
 
     add_movement_dependency_constraints(
@@ -46,63 +45,64 @@ def add_movement_detection_constraints(
 
 def add_aircraft_movement_constraint(
     model: cp_model.CpModel,
-    assigned_vars: dict,
-    aircraft_movement_vars: dict,
+    pattern_assigned_vars: dict[int, dict[int, dict[int, cp_model.IntVar]]],
+    aircraft_movement_vars: dict[str, dict[int, cp_model.IntVar]],
     jobs: list,
-    num_positions: int,
     num_timesteps: int,
 ):
-    """
-    Adds movement detection and enforcement constraints:
-    - Detects when an aircraft changes position between t-1 and t.
-    - Ensures that if a movement is forced at t, then the position must change.
-    """
+    from collections import defaultdict
 
-    # Group job indices by aircraft
-    aircraft_to_jobs = defaultdict(list)
+    # group jobs by aircraft
+    ac_to_jobs = defaultdict(list)
     for j_idx, job in enumerate(jobs):
-        aircraft_to_jobs[job.aircraft.name].append(j_idx)
+        ac_to_jobs[job.aircraft.name].append(j_idx)
 
-    for aircraft_name, job_indices in aircraft_to_jobs.items():
-        for t in range(1, num_timesteps):
-            diffs = []
+    for ac_name, job_idxs in ac_to_jobs.items():
+        for t in range(num_timesteps - 1):
+            diffs: list[cp_model.BoolVar] = []
 
-            for p_idx in range(num_positions):
-                x_prev_terms = []
-                x_curr_terms = []
+            # 2a) find every pattern k that ever appears at t or t+1
+            k_set = set()  # Existing patterns for job j in t and t+1
+            for j in job_idxs:
+                if t in pattern_assigned_vars[j]:
+                    k_set.update(pattern_assigned_vars[j][t].keys())
+                if t + 1 in pattern_assigned_vars[j]:
+                    k_set.update(pattern_assigned_vars[j][t + 1].keys())
 
-                for j_idx in job_indices:
-                    # Note: We only include vars that were actually created (Remember assignments do not exist outside active time indexes, x_prev for start date is None)
-                    x_prev = assigned_vars.get(j_idx, {}).get(p_idx, {}).get(t - 1)
-                    x_curr = assigned_vars.get(j_idx, {}).get(p_idx, {}).get(t)
+            # 2b) for each pattern k, sum across jobs at t vs t+1
+            for k in k_set:
+                prev_sum_terms = []
+                next_sum_terms = []
 
-                    if x_prev is not None:
-                        x_prev_terms.append(x_prev)
-                    if x_curr is not None:
-                        x_curr_terms.append(x_curr)
+                for j in job_idxs:
+                    prev = pattern_assigned_vars[j].get(t, {}).get(k)
+                    nxt = pattern_assigned_vars[j].get(t + 1, {}).get(k)
 
-                # If no terms exist for both prev and curr, skip this position
-                if not x_prev_terms and not x_curr_terms:
-                    continue
+                    if prev is not None:
+                        prev_sum_terms.append(prev)
+                    if nxt is not None:
+                        next_sum_terms.append(nxt)
 
-                # Safe: If only prev or curr exists, treat missing as 0
-                x_prev_sum = sum(x_prev_terms) if x_prev_terms else model.NewConstant(0)
-                x_curr_sum = sum(x_curr_terms) if x_curr_terms else model.NewConstant(0)
+                if len(prev_sum_terms) == 0 and len(next_sum_terms) == 0:
+                    continue  # job doesn't exist at t or t+1, skip
+                sum_prev = (
+                    sum(prev_sum_terms) if prev_sum_terms else model.NewConstant(0)
+                )
+                sum_next = (
+                    sum(next_sum_terms) if next_sum_terms else model.NewConstant(0)
+                )
 
-                # Create a bool diff = 1 if usage changed for this position
-                diff = model.NewBoolVar(f"diff_{aircraft_name}_p{p_idx}_t{t}")
-                model.Add(x_prev_sum != x_curr_sum).OnlyEnforceIf(diff)
-                model.Add(x_prev_sum == x_curr_sum).OnlyEnforceIf(diff.Not())
+                diff = model.NewBoolVar(f"diff_{ac_name}_k{k}_t{t}")
+                model.Add(sum_prev != sum_next).OnlyEnforceIf(diff)
+                model.Add(sum_prev == sum_next).OnlyEnforceIf(diff.Not())
                 diffs.append(diff)
 
+            # 4) movement[t] = OR(diffs)
             if diffs:
-                # DETECT: any diff → movement
-                model.AddMaxEquality(aircraft_movement_vars[aircraft_name][t], diffs)
-
-                # ENFORCE: movement → any diff
-                model.AddBoolOr(diffs).OnlyEnforceIf(
-                    aircraft_movement_vars[aircraft_name][t]
-                )
+                mov = aircraft_movement_vars[ac_name][t]
+                model.AddBoolOr(diffs).OnlyEnforceIf(mov)
+                # and keep its value in sync
+                model.AddMaxEquality(mov, diffs)
 
 
 def add_movement_dependency_constraints(
@@ -133,43 +133,43 @@ def link_aircraft_movements_to_position_movements(
     jobs,
 ):
     """
-    If an aircraft is assigned to a position at time t and moves at t,
-    then that position must also register a movement.
+    An aircraft movement at t (between t and t+1) between position p and p' must enforce a position movement
+    at t in both p and p' (movement_in_position_vars[p][t] and movement_in_position_vars[p'][t]).
+    We need to check  assigned_var[j][p'][t+1] so we know to which position it was assigned.
+    In the contrary, if there is a movement in postion p at time t. There is only an aircraft movement
+    if any of the jobs of that aircraft is assigned to that position according to assigned_var[j][p][t] (for all j).
 
-    Args:
-        model: OR-Tools model.
-        assigned_vars: Dict[j][p][t] → BoolVar
-        movement_in_position_vars: Dict[p][t] → BoolVar
-        aircraft_movement_vars: Dict[aircraft_name][t] → BoolVar
-        jobs: List of Job objects
+
+    This links aircraft-level movement to the spatial footprint of position-level movement.
     """
-    for p_idx in movement_in_position_vars:
-        for t_idx in movement_in_position_vars[p_idx]:
-            triggers = []
 
-            for j_idx, job in enumerate(jobs):
-                if (
-                    p_idx in assigned_vars.get(j_idx, {})
-                    and t_idx in assigned_vars[j_idx][p_idx]
-                ):
-                    is_assigned = assigned_vars[j_idx][p_idx][t_idx]
-                    aircraft_moved = aircraft_movement_vars[job.aircraft.name][t_idx]
+    # 1) Group job‐indices by aircraft name
+    aircraft_to_jobs: dict[str, list[int]] = defaultdict(list)
+    for j_idx, job in enumerate(jobs):
+        aircraft_to_jobs[job.aircraft.name].append(j_idx)
 
-                    # trigger_var = is_assigned AND aircraft_moved
-                    trigger_var = model.NewBoolVar(
-                        f"trigger_p{p_idx}_t{t_idx}_j{j_idx}"
-                    )
-                    model.AddBoolAnd([is_assigned, aircraft_moved]).OnlyEnforceIf(
-                        trigger_var
-                    )
-                    model.AddBoolOr(
-                        [is_assigned.Not(), aircraft_moved.Not()]
-                    ).OnlyEnforceIf(trigger_var.Not())
-                    triggers.append(trigger_var)
+    # 2) For each aircraft and each time‐slice t
+    for ac_name, job_idxs in aircraft_to_jobs.items():
+        for t, ac_mov in aircraft_movement_vars[ac_name].items():
+            # FORWARD: ac_mov + assignment to p at t or t+1 → movement in p at t
+            for j in job_idxs:
+                for p, t_dict in assigned_vars.get(j, {}).items():
+                    if t in t_dict:
+                        assigned = assigned_vars[j][p][t]
+                        model.AddImplication(
+                            ac_mov, movement_in_position_vars[p][t]
+                        ).OnlyEnforceIf(assigned)
+                    if t + 1 in t_dict:
+                        assigned = assigned_vars[j][p][t + 1]
+                        model.AddImplication(
+                            ac_mov, movement_in_position_vars[p][t]
+                        ).OnlyEnforceIf(assigned)
 
-            if triggers:
-                # If any aircraft that was assigned here moved, the position moved
-                model.AddMaxEquality(movement_in_position_vars[p_idx][t_idx], triggers)
-            else:
-                # No job is even assigned here → movement must be 0
-                model.Add(movement_in_position_vars[p_idx][t_idx] == 0)
+    # BACKWARD: movement in p at t + assignment to p at t → ac_mov
+    for j in job_idxs:
+        for p, t_dict in assigned_vars.get(j, {}).items():
+            if t in t_dict:
+                assigned = assigned_vars[j][p][t]
+                pos_mov = movement_in_position_vars[p][t]
+                # (assigned AND pos_mov) ⇒ ac_mov
+                model.AddBoolOr([assigned.Not(), pos_mov.Not(), ac_mov])

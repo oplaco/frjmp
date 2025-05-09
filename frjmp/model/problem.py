@@ -11,7 +11,10 @@ from frjmp.model.variables.pattern_assignment import create_pattern_assignment_v
 from frjmp.model.constraints.assignment import add_job_assignment_constraints
 from frjmp.model.constraints.capacity import add_position_capacity_constraints
 from frjmp.model.constraints.movement import add_movement_detection_constraints
-from frjmp.model.objective_function import minimize_total_movements
+from frjmp.model.objective_function import (
+    minimize_total_aircraft_movements,
+    minimize_total_position_movements,
+)
 from frjmp.model.parameters.movement_dependency import MovementDependency
 from frjmp.model.parameters.position_aircraft_model import (
     PositionsAircraftModelDependency,
@@ -60,7 +63,7 @@ class Problem:
 
         # --- Pre-processing ---#
         if t_last is None:
-            t_last = t0 + timedelta(days=100)
+            t_last = t0 + timedelta(days=300)
         trim_jobs_before_t0_inplace(jobs, t0)
         trim_jobs_after_last_t_inplace(jobs, t_last)
 
@@ -128,10 +131,10 @@ class Problem:
         add_movement_detection_constraints(
             self.model,
             self.assigned_vars,
+            self.pattern_assigned_vars,
             self.aircraft_movement_vars,
             self.movement_in_position_vars,
             self.jobs,
-            num_positions=len(self.positions),
             num_timesteps=len(self.time_step_indexes),
             movement_dependency=self.movement_dependency,
         )
@@ -145,8 +148,12 @@ class Problem:
         )
 
     def set_objective(self):
-        total_movements = minimize_total_movements(
+        total_movements = minimize_total_aircraft_movements(
             self.model, self.aircraft_movement_vars
+        )
+
+        total_movements = minimize_total_position_movements(
+            self.model, self.movement_in_position_vars
         )
         self.objective_function = total_movements
 
@@ -156,6 +163,16 @@ class Problem:
         except KeyError:
             raise ValueError(
                 f"Invalid fixed assignment: variable for job {j_idx}, position {p_idx}, time {t_idx} does not exist."
+            )
+        self.fixed_variables.append((var, value))
+        return var
+
+    def add_fixed_pattern_assignment(self, j_idx, t_idx, k_idx, value=True):
+        try:
+            var = self.pattern_assigned_vars[j_idx][t_idx][k_idx]
+        except KeyError:
+            raise ValueError(
+                f"Invalid fixed pattern assignment: variable for job {j_idx}, time {t_idx}, pattern {k_idx} does not exist."
             )
         self.fixed_variables.append((var, value))
         return var

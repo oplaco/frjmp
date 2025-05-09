@@ -50,6 +50,7 @@ class ProblemTestSetup(BasicTestSetup):
         self.position1 = Position("Hangar A", [self.need1], capacity=1)
         self.position2 = Position("Hangar B", [self.need1], capacity=1)
         self.position3 = Position("Hangar C", [self.need1], capacity=1)
-        positions = [self.position1, self.position2, self.position3]
+        self.position4 = Position("Hangar D", [self.need1], capacity=1)
+        positions = [self.position1, self.position2, self.position3, self.position4]
         t0 = self.date1
         self.problem = Problem(self.aircraft_models, jobs, positions, t0)
