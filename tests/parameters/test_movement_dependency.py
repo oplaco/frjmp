@@ -1,5 +1,5 @@
 import unittest
-from frjmp.model.parameters.movement_dependency import MovementDependency
+from frjmp.model.parameters.positions_configuration import PositionsConfiguration
 from frjmp.model.sets.position import Position
 from tests.setup import ProblemTestSetup
 
@@ -12,7 +12,7 @@ class TestMovementDependency(ProblemTestSetup):
         pos_c = Position("C", [])
         pos_d = Position("D", [])
 
-        dep = MovementDependency(positions=[pos_a, pos_b, pos_c, pos_d])
+        dep = PositionsConfiguration(positions=[pos_a, pos_b, pos_c, pos_d])
 
         dep.add_trigger(pos_a, pos_b)
         dep.add_trigger(pos_a, pos_c)
@@ -42,8 +42,8 @@ class TestMovementDependency(ProblemTestSetup):
         Test if the corresponding aircraft movements are created.
         """
         self.problem.positions = [self.position1, self.position2, self.position3]
-        self.problem.movement_dependency.add_trigger(self.position1, self.position2)
-        self.problem.movement_dependency.add_trigger(self.position1, self.position3)
+        self.problem.positions_configuration.add_trigger(self.position1, self.position2)
+        self.problem.positions_configuration.add_trigger(self.position1, self.position3)
 
         t0 = 0
         # Fixed assignments

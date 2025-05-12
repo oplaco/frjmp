@@ -1,4 +1,4 @@
-from frjmp.model.parameters.movement_dependency import MovementDependency
+from frjmp.model.parameters.positions_configuration import PositionsConfiguration
 from frjmp.model.sets.job import Job
 from collections import defaultdict
 from ortools.sat.python import cp_model
@@ -14,7 +14,7 @@ def add_movement_detection_constraints(
     movement_in_position_vars: Dict[int, Dict[int, cp_model.IntVar]],
     jobs: list[Job],
     num_timesteps: int,
-    movement_dependency: MovementDependency,
+    positions_configuration: PositionsConfiguration,
 ):
     """
     Adds movement detection constraints for all jobs.
@@ -31,7 +31,7 @@ def add_movement_detection_constraints(
     )
 
     add_movement_dependency_constraints(
-        model, movement_in_position_vars, movement_dependency, num_timesteps
+        model, movement_in_position_vars, positions_configuration, num_timesteps
     )
 
     link_aircraft_movements_to_position_movements(
@@ -106,9 +106,9 @@ def add_aircraft_movement_constraint(
 
 
 def add_movement_dependency_constraints(
-    model, movement_in_position_vars, movement_dependency, num_timesteps
+    model, movement_in_position_vars, positions_configuration, num_timesteps
 ):
-    dependency_matrix, index_map = movement_dependency.generate_matrix()
+    dependency_matrix, index_map = positions_configuration.generate_matrix()
     size = len(dependency_matrix)
     for from_idx in range(size):
         for to_idx in range(size):

@@ -15,7 +15,7 @@ from frjmp.model.objective_function import (
     minimize_total_aircraft_movements,
     minimize_total_position_movements,
 )
-from frjmp.model.parameters.movement_dependency import MovementDependency
+from frjmp.model.parameters.positions_configuration import PositionsConfiguration
 from frjmp.model.parameters.position_aircraft_model import (
     PositionsAircraftModelDependency,
 )
@@ -44,26 +44,26 @@ class Problem:
         self,
         aircraft_models: list[AircraftModel],
         jobs: list[Job],
-        positions: list[Position],
+        positions_configuration: PositionsConfiguration,
         t0: date = date.today(),
         t_last: date = None,
     ):
         # Sets
         self.aircraft_models = aircraft_models
         self.jobs = jobs
-        self.positions = positions
+        self.positions_configuration = positions_configuration
+        self.positions = positions_configuration.positions
         self.t0 = t0
         self.fixed_variables = (
             []
         )  # List of (var, value) of fixed variables. This can be used for initial or contour conditions.
-        self.movement_dependency = MovementDependency(positions=positions)
         self.pos_aircraft_model_dependency = PositionsAircraftModelDependency(
-            aircraft_models, positions
+            aircraft_models, self.positions
         )
 
         # --- Pre-processing ---#
         if t_last is None:
-            t_last = t0 + timedelta(days=300)
+            t_last = t0 + timedelta(days=200)
         trim_jobs_before_t0_inplace(jobs, t0)
         trim_jobs_after_last_t_inplace(jobs, t_last)
 
@@ -78,7 +78,9 @@ class Problem:
 
         # --- Validations --- #
         validate_non_overlapping_jobs_per_aircraft(jobs)
-        validate_capacity_feasibility(jobs, positions, compressed_dates, date_to_index)
+        validate_capacity_feasibility(
+            jobs, self.positions, compressed_dates, date_to_index
+        )
 
         # Create model
         self.model = cp_model.CpModel()
@@ -136,7 +138,7 @@ class Problem:
             self.movement_in_position_vars,
             self.jobs,
             num_timesteps=len(self.time_step_indexes),
-            movement_dependency=self.movement_dependency,
+            positions_configuration=self.positions_configuration,
         )
 
         add_position_capacity_constraints(

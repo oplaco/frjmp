@@ -2,7 +2,7 @@ from frjmp.model.sets.position import Position
 from typing import Dict, List
 
 
-class MovementDependency:
+class PositionsConfiguration:
     def __init__(
         self,
         positions: List[Position] = None,

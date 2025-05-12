@@ -10,7 +10,7 @@ from frjmp.model.constraints.movement import (
     add_aircraft_movement_constraint,
     link_aircraft_movements_to_position_movements,
 )
-from frjmp.model.parameters.movement_dependency import MovementDependency
+from frjmp.model.parameters.positions_configuration import PositionsConfiguration
 from frjmp.model.parameters.position_aircraft_model import (
     PositionsAircraftModelDependency,
 )
@@ -119,7 +119,7 @@ class TestMovementConstraint(unittest.TestCase):
             self.aircraft_movement_vars,
             self.jobs,
         )
-        pos_aircraft_model_dependency = MovementDependency(positions=self.positions)
+        pos_aircraft_model_dependency = PositionsConfiguration(positions=self.positions)
         add_movement_dependency_constraints(
             self.model,
             self.movement_in_position_vars,
