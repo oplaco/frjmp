@@ -2,7 +2,7 @@ import pandas as pd
 from frjmp.model.sets.need import Need
 from frjmp.model.sets.phase import Phase
 from frjmp.model.sets.position import Position
-from frjmp.model.parameters.positions_configuration import PositionsConfiguration
+from frjmp.model.sets.aircraft import AircraftModel
 
 
 class ProblemSetup:
@@ -25,6 +25,8 @@ class ProblemSetup:
         self.needs = []
         self.phases = []
         self.triggers = {}
+        self.aircraft_models = {}
+        self.load()
 
     def load(self):
         xls = pd.ExcelFile(self.filepath)
@@ -40,6 +42,7 @@ class ProblemSetup:
         self._parse_phases(df_phase_need_link)
         self._parse_positions(df_position)
         self._parse_movement_dependency(df_movement_depedency)
+        self._parse_aircraft_models()
 
     def _parse_needs(self, df):
         # Replace N/A (now nan) needs to our default waiting need
@@ -126,3 +129,11 @@ class ProblemSetup:
                 if int(df.loc[from_name, to_name]) == 1:
                     to_pos = name_to_position[to_name]
                     self.triggers.setdefault(from_pos, set()).add(to_pos)
+
+    def _parse_aircraft_models(self):
+        """Add excel sheet in the future for scalability."""
+        c295_name = "C295"
+        a400m_name = "A400M"
+        c295 = AircraftModel(c295_name)
+        a400m = AircraftModel(a400m_name)
+        self.aircraft_models = {c295_name: c295, a400m_name: a400m}
