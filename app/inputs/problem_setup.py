@@ -1,4 +1,8 @@
 import pandas as pd
+from frjmp.model.parameters.positions_configuration import PositionsConfiguration
+from frjmp.model.parameters.position_aircraft_model import (
+    PositionsAircraftModelDependency,
+)
 from frjmp.model.sets.need import Need
 from frjmp.model.sets.phase import Phase
 from frjmp.model.sets.position import Position
@@ -25,7 +29,6 @@ class ProblemSetup:
         self.needs = []
         self.phases = []
         self.triggers = {}
-        self.aircraft_models = {}
         self.load()
 
     def load(self):
@@ -43,6 +46,12 @@ class ProblemSetup:
         self._parse_positions(df_position)
         self._parse_movement_dependency(df_movement_depedency)
         self._parse_aircraft_models()
+        self.positions_configuration = PositionsConfiguration(
+            self.positions, self.triggers
+        )
+        self.position_aircraftmodel_dependency = PositionsAircraftModelDependency(
+            self.aircraft_models_list, self.positions
+        )
 
     def _parse_needs(self, df):
         # Replace N/A (now nan) needs to our default waiting need
@@ -136,4 +145,5 @@ class ProblemSetup:
         a400m_name = "A400M"
         c295 = AircraftModel(c295_name)
         a400m = AircraftModel(a400m_name)
-        self.aircraft_models = {c295_name: c295, a400m_name: a400m}
+        self.aircraft_models_dict = {c295_name: c295, a400m_name: a400m}
+        self.aircraft_models_list = list(self.aircraft_models_dict.values())

@@ -8,6 +8,9 @@ from frjmp.model.sets.job import Job
 from frjmp.model.sets.phase import Phase
 from frjmp.model.sets.position import Position
 from frjmp.model.parameters.positions_configuration import PositionsConfiguration
+from frjmp.model.parameters.position_aircraft_model import (
+    PositionsAircraftModelDependency,
+)
 
 
 """Classes with setup methods that already include information we can reuse between test cases.
@@ -54,5 +57,6 @@ class ProblemTestSetup(BasicTestSetup):
         self.position4 = Position("Hangar D", [self.need1], capacity=1)
         positions = [self.position1, self.position2, self.position3, self.position4]
         pc = PositionsConfiguration(positions=positions)
+        pad = PositionsAircraftModelDependency(self.aircraft_models, positions)
         t0 = self.date1
-        self.problem = Problem(self.aircraft_models, jobs, pc, t0)
+        self.problem = Problem(jobs, pc, pad, t0)

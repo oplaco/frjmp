@@ -15,7 +15,6 @@ def create_pattern_assignment_variables(
     compressed_dates: list[date],
     date_to_index: dict[date, int],
     dependency: PositionsAircraftModelDependency,
-    aircraft_models: list[AircraftModel],
     assigned_vars,
 ):
     """
@@ -27,7 +26,9 @@ def create_pattern_assignment_variables(
     """
     pattern_assigned_vars = {}
     matrix = dependency.generate_matrix()
-    model_to_index = {model: idx for idx, model in enumerate(aircraft_models)}
+    model_to_index = {
+        model: idx for idx, model in enumerate(dependency.aircraft_models)
+    }
 
     for j_idx, job in enumerate(jobs):
         pattern_assigned_vars[j_idx] = {}

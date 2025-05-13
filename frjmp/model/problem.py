@@ -42,28 +42,30 @@ class Problem:
 
     def __init__(
         self,
-        aircraft_models: list[AircraftModel],
         jobs: list[Job],
         positions_configuration: PositionsConfiguration,
+        position_aircraftmodel_dependency: PositionsAircraftModelDependency,
         t0: date = date.today(),
         t_last: date = None,
+        initial_conditions: dict = None,
     ):
-        # Sets
-        self.aircraft_models = aircraft_models
+        # Init variables
         self.jobs = jobs
         self.positions_configuration = positions_configuration
         self.positions = positions_configuration.positions
         self.t0 = t0
+        self.pos_aircraft_model_dependency = position_aircraftmodel_dependency
+        self.aircraft_models = position_aircraftmodel_dependency.aircraft_models
+        if t_last is None:
+            t_last = t0 + timedelta(days=200)
+        self.initial_conditions = initial_conditions
+
+        # Other variables
         self.fixed_variables = (
             []
         )  # List of (var, value) of fixed variables. This can be used for initial or contour conditions.
-        self.pos_aircraft_model_dependency = PositionsAircraftModelDependency(
-            aircraft_models, self.positions
-        )
 
         # --- Pre-processing ---#
-        if t_last is None:
-            t_last = t0 + timedelta(days=200)
         trim_jobs_before_t0_inplace(jobs, t0)
         trim_jobs_after_last_t_inplace(jobs, t_last)
 
@@ -109,12 +111,13 @@ class Problem:
             self.compressed_dates,
             self.date_to_index,
             self.pos_aircraft_model_dependency,
-            self.aircraft_models,
             self.assigned_vars,
         )
 
     def add_constraints(self):
         # Add the fixed values (if any) of the variables as constraints to the problem.
+        if self.initial_conditions is not None:
+            self._apply_initial_conditions_as_fixed_patterns()
         for var, value in self.fixed_variables:
             self.model.Add(var == int(value))
 
@@ -192,6 +195,48 @@ class Problem:
     def add_fixed_bool_var(self, var, value=True):
         # Appends to fixed_variables[] a boolean variable and its desired fixed value.
         self.fixed_variables.append((var, value))
+
+    def _apply_initial_conditions_as_fixed_patterns(self):
+        t0_idx = 0  # assuming t0 is at index 0
+        pos_index = {p.name: idx for idx, p in enumerate(self.positions)}
+        model_index = {model: idx for idx, model in enumerate(self.aircraft_models)}
+        pattern_matrix = self.pos_aircraft_model_dependency.generate_matrix()
+
+        for aircraft, assigned_positions in self.initial_conditions[
+            "assignments"
+        ].items():
+            assigned_pos_names = {pos.name for pos in assigned_positions}
+            model = aircraft.model
+            model_idx = model_index[model]
+
+            # Find matching job
+            job_idx = None
+            for j_idx, job in enumerate(self.jobs):
+                if job.aircraft == aircraft and job.start <= self.t0 <= job.end:
+                    job_idx = j_idx
+                    break
+            if job_idx is None:
+                raise ValueError(f"No active job found for {aircraft.name} at t0.")
+
+            # Try to match pattern k_idx in model.allowed_patterns
+            matched = False
+            for k_idx, pattern_row in enumerate(pattern_matrix[model_idx]):
+                pattern_positions = {
+                    self.positions[p_idx].name
+                    for p_idx, used in enumerate(pattern_row)
+                    if used == 1
+                }
+                if pattern_positions == assigned_pos_names:
+                    self.add_fixed_pattern_assignment(
+                        job_idx, t0_idx, k_idx, value=True
+                    )
+                    matched = True
+                    break
+
+            if not matched:
+                raise ValueError(
+                    f"No matching pattern found for aircraft {aircraft.name} with positions {assigned_pos_names}."
+                )
 
     def solve(self):
         self.add_constraints()

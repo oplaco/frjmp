@@ -13,7 +13,7 @@ class InitialConditions:
 
     # Excel columns titles
     AIRCRAFT_NAME_COL = "MSN"
-    INITIAL_POSITIONS_COL = "POSITIONS"
+    INITIAL_POSITION_COL = "POSITION"
 
     def __init__(
         self,
@@ -28,7 +28,7 @@ class InitialConditions:
         self.positions = positions
         self.aircrafts = aircrafts
         self.jobs = jobs
-        self.initial_assignments = {}
+        self.initial_conditions = {}
 
         self.load()
 
@@ -38,30 +38,36 @@ class InitialConditions:
         if missing:
             raise ValueError(f"Missing required sheets: {', '.join(missing)}")
 
-        df_industrial_phase = xls.parse(self.POSITIONING_SHEET)
+        df_industrial_phase = xls.parse(
+            self.POSITIONING_SHEET, dtype={self.AIRCRAFT_NAME_COL: str}
+        )
 
         self._parse_initial_conditions(df_industrial_phase)
 
     def _parse_initial_conditions(self, df):
-        assigned_aircrafts = set()
+        assignments_initial_conditions = {}
         name_to_position = {p.name: p for p in self.positions}
 
         for _, row in df.iterrows():
-            msn = str(row["MSN"]).strip()
-            if msn in assigned_aircrafts:
-                raise ValueError(f"Aircraft {msn} is assigned multiple times at t0.")
+            position_name = str(row[self.INITIAL_POSITION_COL]).strip()
+            msn = str(row[self.AIRCRAFT_NAME_COL]).strip()
 
-            assigned_aircrafts.add(msn)
+            if not msn or msn.lower() == "nan":
+                continue  # No aircraft assigned to this position
 
             if msn not in self.aircrafts:
                 raise ValueError(f"Aircraft {msn} not found in known aircrafts.")
 
+            if position_name not in name_to_position:
+                raise ValueError(f"Unknown position '{position_name}'.")
+
+            pos = name_to_position[position_name]
             aircraft = self.aircrafts[msn]
 
             # Get the job active at t0
             active_job = None
             for job in self.jobs:
-                if job.aircraft.name == msn and job.start <= self.t0 <= job.end:
+                if job.aircraft == aircraft and job.start <= self.t0 <= job.end:
                     active_job = job
                     break
 
@@ -70,19 +76,15 @@ class InitialConditions:
 
             required_need = active_job.phase.required_need
 
-            # Get positions from string (semicolon-separated)
-            position_names = [p.strip() for p in str(row["POSITIONS"]).split(";")]
-            local_positions = []
+            if required_need not in pos.available_needs:
+                raise ValueError(
+                    f"Position '{position_name}' cannot fulfill required need '{required_need.name}' "
+                    f"for aircraft {msn} at t0."
+                )
 
-            for pname in position_names:
-                if pname not in name_to_position:
-                    raise ValueError(f"Unknown position '{pname}' for aircraft {msn}.")
-                pos = name_to_position[pname]
-                if required_need not in pos.available_needs:
-                    raise ValueError(
-                        f"Position '{pname}' cannot fulfill required need '{required_need.name}' "
-                        f"for aircraft {msn} at t0."
-                    )
-                local_positions.append(pos)
+            if aircraft not in assignments_initial_conditions:
+                assignments_initial_conditions[aircraft] = []
 
-            self.initial_assignments[aircraft] = local_positions
+            assignments_initial_conditions[aircraft].append(pos)
+
+        self.initial_conditions = {"assignments": assignments_initial_conditions}

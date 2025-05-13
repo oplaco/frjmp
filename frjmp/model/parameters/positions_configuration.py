@@ -23,17 +23,17 @@ class PositionsConfiguration:
 
     def add_trigger(self, from_position: Position, to_position: Position):
         """Declare that a movement in from_position triggers to_position."""
-        self.triggers.setdefault(from_position.name, set()).add(to_position.name)
+        self.triggers.setdefault(from_position, set()).add(to_position)
 
     def generate_matrix(self):
         """Return: matrix[i][j] = 1 if movement in i triggers movement in j, and name -> index mapping."""
         index_map = {pos.name: idx for idx, pos in enumerate(self.positions)}
         size = len(self.positions)
         matrix = [[0] * size for _ in range(size)]
-        for from_name, to_names in self.triggers.items():
-            i = index_map[from_name]
-            for to_name in to_names:
-                j = index_map[to_name]
+        for from_position, to_positions in self.triggers.items():
+            i = index_map[from_position.name]
+            for to_position in to_positions:
+                j = index_map[to_position.name]
                 matrix[i][j] = 1
 
         return matrix, index_map

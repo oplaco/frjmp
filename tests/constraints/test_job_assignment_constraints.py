@@ -113,7 +113,6 @@ class TestJobAssignmentConstraints(unittest.TestCase):
             self.compressed_dates,
             self.date_to_index,
             pos_aircraft_model_dependency,
-            self.aircraft_models,
             self.assigned_vars,
         )
 
