@@ -70,7 +70,7 @@ class Problem:
         trim_jobs_after_last_t_inplace(jobs, t_last)
 
         # Calculate compressed time scale
-        compressed_dates, date_to_index, index_to_date = compress_dates(jobs)
+        compressed_dates, date_to_index, index_to_date = compress_dates(jobs, [t0])
         self.compressed_dates = compressed_dates
         self.date_to_index = date_to_index
         self.index_to_date = index_to_date

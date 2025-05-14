@@ -4,7 +4,7 @@ from typing import List, Dict
 from frjmp.model.sets.job import Job
 
 
-def compress_dates(jobs: List[Job]):
+def compress_dates(jobs: List[Job], individual_dates: list[date] = None):
     """
     Compresses the scheduling timeline by extracting and indexing only the relevant dates
     across all jobs in the problem.
@@ -41,6 +41,7 @@ def compress_dates(jobs: List[Job]):
 
     Args:
         jobs (List[Job]): The list of jobs, each with a start and end date.
+        individual_dates (List[Job]): The list of additional dates that want to be added as time steps.
 
     Returns:
         Tuple:
@@ -50,6 +51,10 @@ def compress_dates(jobs: List[Job]):
     """
 
     unique_dates = set()
+
+    if individual_dates:
+        for date in individual_dates:
+            unique_dates.add(date)
 
     for job in jobs:
         unique_dates.add(job.start)
