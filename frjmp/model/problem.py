@@ -157,9 +157,9 @@ class Problem:
             self.model, self.aircraft_movement_vars
         )
 
-        total_movements = minimize_total_position_movements(
-            self.model, self.movement_in_position_vars
-        )
+        # total_movements = minimize_total_position_movements(
+        #     self.model, self.movement_in_position_vars
+        # )
         self.objective_function = total_movements
 
     def add_fixed_assignment(self, j_idx, p_idx, t_idx, value=True):

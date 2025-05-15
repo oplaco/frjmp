@@ -92,4 +92,4 @@ def plot_solution(problem, solver):
         color_map,
     )
 
-    plt.show()  # Block the display
+    plt.show(block=True)  # Block the display

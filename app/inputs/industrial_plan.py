@@ -53,7 +53,10 @@ class IndustrialPlan:
 
             model_name = models[0]
             if model_name not in self.aircraft_models:
-                raise ValueError(f"Unknown model '{model_name}' for MSN {msn}")
+                raise ValueError(
+                    f"Unknown model '{model_name}' for MSN {msn}. \
+                    \nAvailable models are {list(self.aircraft_models.keys())}"
+                )
 
             model = self.aircraft_models[model_name]
             self.aircrafts[str(msn)] = Aircraft(str(msn), model)

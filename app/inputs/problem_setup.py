@@ -1,6 +1,7 @@
 import pandas as pd
 from frjmp.model.parameters.positions_configuration import PositionsConfiguration
 from frjmp.model.parameters.position_aircraft_model import (
+    Pattern,
     PositionsAircraftModelDependency,
 )
 from frjmp.model.sets.need import Need
@@ -14,11 +15,14 @@ class ProblemSetup:
     PHASE_NEED_LINK_SHEET = "PHASE_NEED_LINK"
     POSITION_SHEET = "POSITION"
     MOVEMENT_DEPENDENCY_SHEET = "MOVEMENT_DEPENDENCY"
+    AIRCRAFT_MODEL_SHEET = "AIRCRAFT_MODEL"
     REQUIRED_SHEETS = {PHASE_NEED_LINK_SHEET, POSITION_SHEET, MOVEMENT_DEPENDENCY_SHEET}
 
     # Excel columns titles
     NEED_COL = "NEED"
     PHASE_COL = "PHASE"
+    MODEL_COL = "MODEL"
+    PATTERN_COL = "PATTERN"
 
     # Default waiting need name.
     WAITING_NEED = "WAITING"
@@ -40,12 +44,13 @@ class ProblemSetup:
         df_phase_need_link = xls.parse(self.PHASE_NEED_LINK_SHEET)
         df_position = xls.parse(self.POSITION_SHEET)
         df_movement_depedency = xls.parse(self.MOVEMENT_DEPENDENCY_SHEET, index_col=0)
+        df_aircraft_model = xls.parse(self.AIRCRAFT_MODEL_SHEET)
 
         self._parse_needs(df_phase_need_link)
         self._parse_phases(df_phase_need_link)
         self._parse_positions(df_position)
         self._parse_movement_dependency(df_movement_depedency)
-        self._parse_aircraft_models()
+        self._parse_aircraft_models(df_aircraft_model)
         self.positions_configuration = PositionsConfiguration(
             self.positions, self.triggers
         )
@@ -62,7 +67,10 @@ class ProblemSetup:
 
     def _parse_phases(self, df):
         need_map = {need.name: need for need in self.needs}
+        # Default waiting phase with waiting need.
+        self.phases.append(Phase("WAITING", need_map[self.WAITING_NEED]))
 
+        # User-defined phases.
         for _, row in df.iterrows():
             phase_name = row[self.PHASE_COL]
             need_name = row[self.NEED_COL]
@@ -139,11 +147,37 @@ class ProblemSetup:
                     to_pos = name_to_position[to_name]
                     self.triggers.setdefault(from_pos, set()).add(to_pos)
 
-    def _parse_aircraft_models(self):
-        """Add excel sheet in the future for scalability."""
-        c295_name = "C295"
-        a400m_name = "A400M"
-        c295 = AircraftModel(c295_name)
-        a400m = AircraftModel(a400m_name)
-        self.aircraft_models_dict = {c295_name: c295, a400m_name: a400m}
-        self.aircraft_models_list = list(self.aircraft_models_dict.values())
+    def _parse_aircraft_models(self, df) -> list[AircraftModel]:
+        name_to_position = {p.name: p for p in self.positions}
+        models = {}
+
+        for _, row in df.iterrows():
+            model_name = str(row[self.MODEL_COL]).strip()
+            pattern_str = str(row[self.PATTERN_COL]).strip()
+
+            model = AircraftModel(model_name)
+
+            if pattern_str.lower() == "nan" or not pattern_str:
+                models[model_name] = model
+                continue  # No patterns defined
+
+            # Cada patrón separado por ";"
+            pattern_groups = pattern_str.split(";")
+            for group in pattern_groups:
+                position_names = [p.strip() for p in group.split(",") if p.strip()]
+                pattern_positions = []
+
+                for pname in position_names:
+                    if pname not in name_to_position:
+                        raise ValueError(
+                            f"Position '{pname}' not found in known positions."
+                        )
+                    pattern_positions.append(name_to_position[pname])
+
+                pattern = Pattern(pattern_positions)
+                model.allowed_patterns.append(pattern)
+
+            models[model_name] = model
+
+        self.aircraft_models_dict = models
+        self.aircraft_models_list = list(models.values())
