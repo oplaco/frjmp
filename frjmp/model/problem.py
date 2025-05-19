@@ -57,7 +57,12 @@ class Problem:
         self.pos_aircraft_model_dependency = position_aircraftmodel_dependency
         self.aircraft_models = position_aircraftmodel_dependency.aircraft_models
         if t_last is None:
-            t_last = t0 + timedelta(days=200)
+            t_last = t0 + timedelta(days=365)
+        elif t_last <= t0:
+            raise ValueError(
+                f"Invalid date range: END_DATE ({t_last}) must be later than T0_DATE ({t0}). "
+                f"Please correct the values in the initial conditions."
+            )
         self.initial_conditions = initial_conditions
 
         # Other variables

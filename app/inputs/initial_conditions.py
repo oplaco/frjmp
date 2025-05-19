@@ -1,5 +1,5 @@
 import pandas as pd
-from datetime import date
+from datetime import date, datetime, timedelta
 from frjmp.model.sets.job import Job
 from frjmp.model.sets.phase import Phase
 from frjmp.model.sets.position import Position
@@ -9,25 +9,31 @@ from frjmp.model.sets.aircraft import Aircraft
 class InitialConditions:
     # Excel sheet names
     POSITIONING_SHEET = "POSITIONING"
-    REQUIRED_SHEETS = {POSITIONING_SHEET}
+    CONFIGURATION_SHEET = "CONFIGURATION"
+    REQUIRED_SHEETS = {POSITIONING_SHEET, CONFIGURATION_SHEET}
 
     # Excel columns titles
     AIRCRAFT_NAME_COL = "MSN"
     INITIAL_POSITION_COL = "POSITION"
 
+    # Excel variable row names
+    T0_NAME = "T0_DATE"
+    T_LAST_NAME = "END_DATE"
+
     def __init__(
         self,
         filepath: str,
-        t0: date,
         positions: list[Position],
         aircrafts: list[Aircraft],
         jobs: list[Job],
     ):
         self.filepath = filepath
-        self.t0 = t0
         self.positions = positions
         self.aircrafts = aircrafts
         self.jobs = jobs
+
+        self.t0 = None
+        self.t_last = None
         self.initial_conditions = {}
 
         self.load()
@@ -38,11 +44,39 @@ class InitialConditions:
         if missing:
             raise ValueError(f"Missing required sheets: {', '.join(missing)}")
 
-        df_industrial_phase = xls.parse(
+        df_initial_configuration = xls.parse(
+            self.CONFIGURATION_SHEET, dtype={self.AIRCRAFT_NAME_COL: str}
+        )
+
+        df_initial_positioning = xls.parse(
             self.POSITIONING_SHEET, dtype={self.AIRCRAFT_NAME_COL: str}
         )
 
-        self._parse_initial_conditions(df_industrial_phase)
+        self._parse_initial_configuration(df_initial_configuration)
+        self._parse_initial_conditions(df_initial_positioning)
+
+    def _parse_initial_configuration(self, df):
+        def parse_value(var_name, val):
+            if pd.isna(val) or str(val).strip().lower() in ["", "none"]:
+                return None
+
+            val = str(val).strip()
+            for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d", "%d.%m.%Y"):
+                try:
+                    return datetime.strptime(val, fmt).date()
+                except ValueError:
+                    continue
+            raise ValueError(f"Invalid date format for {var_name}: {val}")
+
+        date_vars = {
+            str(row["VARIABLE"]).strip(): parse_value(
+                str(row["VARIABLE"]).strip(), row["VALUE"]
+            )
+            for _, row in df.iterrows()
+        }
+
+        self.t0 = date_vars.get("T0_DATE") or date.today()
+        self.t_last = date_vars.get("END_DATE") or (self.t0 + timedelta(days=365))
 
     def _parse_initial_conditions(self, df):
         assignments_initial_conditions = {}

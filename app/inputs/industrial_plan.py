@@ -16,6 +16,9 @@ class IndustrialPlan:
     START_COL = "START"
     END_COL = "END"
 
+    # Rows to remove from industrial plan (Normally because they represent milestones rather than actual phases with work).
+    PHASES_TO_REMOVE = ["DGAM", "TECHNICAL ACCEPTANCE", "ADM", "CAR", "ROLLOUT", "CTOT"]
+
     def __init__(
         self,
         filepath: str,
@@ -67,6 +70,8 @@ class IndustrialPlan:
         for _, row in df.iterrows():
             msn = str(row[self.AIRCRAFT_NAME_COL]).strip()
             phase_code = str(row[self.PHASE_COL]).strip()
+            if phase_code in self.PHASES_TO_REMOVE:
+                continue
             start = pd.to_datetime(row[self.START_COL]).date()
             end = pd.to_datetime(row[self.END_COL]).date()
 
