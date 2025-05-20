@@ -68,7 +68,8 @@ class ProblemSetup:
     def _parse_phases(self, df):
         need_map = {need.name: need for need in self.needs}
         # Default waiting phase with waiting need.
-        self.phases.append(Phase("WAITING", need_map[self.WAITING_NEED]))
+        self.waiting_phase = Phase("WAITING", need_map[self.WAITING_NEED])
+        self.phases.append(self.waiting_phase)
 
         # User-defined phases.
         for _, row in df.iterrows():
