@@ -7,8 +7,9 @@ class TestFixedVariableConstraints(ProblemTestSetup):
 
     def test_fixed_assignment(self):
         # Assignments. Simulating assigment initial conditions.
-        var1 = self.problem.add_fixed_assignment(0, 0, 0)
-        var2 = self.problem.add_fixed_assignment(1, 1, 0)
+        t_init_idx = self.problem.date_to_index[self.t_init]
+        var1 = self.problem.add_fixed_assignment(0, 0, t_init_idx)
+        var2 = self.problem.add_fixed_assignment(1, 1, t_init_idx)
 
         status, solver = self.problem.solve()
 

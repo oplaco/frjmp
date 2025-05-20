@@ -1,7 +1,7 @@
 import unittest
 from datetime import date
 
-from frjmp.utils.timeline_utils import compress_dates, trim_jobs_before_t0_inplace
+from frjmp.utils.timeline_utils import compress_dates, trim_jobs_before_date_inplace
 from frjmp.model.sets.job import Job
 from frjmp.model.sets.phase import Phase
 from frjmp.model.sets.need import Need
@@ -48,7 +48,7 @@ class TestCompressDates(unittest.TestCase):
         job3 = Job(aircraft, phase, date(2025, 7, 16), date(2025, 7, 20))
 
         jobs = [job1, job2, job3]
-        trim_jobs_before_t0_inplace(jobs, t0)
+        trim_jobs_before_date_inplace(jobs, t0)
         self.assertEqual(len(jobs), 2)  # Len expected to be 2 (job1 removed).
         self.assertFalse(job1 in jobs)  # job1 should no longer be in jobs.
         self.assertTrue(job2 and job3 in jobs)  # job2 and job3 should be in jobs.

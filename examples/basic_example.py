@@ -31,11 +31,11 @@ aircraft_models = [c295, a400m]
 a1 = Aircraft("185", c295)
 a2 = Aircraft("187", a400m)
 
-# T0
-t0 = date(2025, 4, 15)
+# t_init
+t_init = date(2025, 4, 15)
 
 # Create Jobs
-job1 = Job(a1, edv_phase, t0, t0 + timedelta(days=10))
+job1 = Job(a1, edv_phase, t_init, t_init + timedelta(days=10))
 job2 = Job(a2, foury_phase, date(2025, 4, 16), date(2025, 5, 20))
 job3 = Job(a2, edv_phase, date(2025, 5, 25), date(2025, 7, 20))
 
@@ -50,7 +50,7 @@ positions = [posA, posB]
 
 
 # Initialize Problem
-problem = Problem(aircraft_models, jobs, positions, t0)
+problem = Problem(aircraft_models, jobs, positions, t_init)
 
 
 # Solve

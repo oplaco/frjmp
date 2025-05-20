@@ -24,7 +24,7 @@ from frjmp.model.sets.job import Job
 from frjmp.model.sets.position import Position
 from frjmp.utils.timeline_utils import (
     compress_dates,
-    trim_jobs_before_t0_inplace,
+    trim_jobs_before_date_inplace,
     trim_jobs_after_last_t_inplace,
 )
 from frjmp.utils.validation_utils import (
@@ -45,7 +45,7 @@ class Problem:
         jobs: list[Job],
         positions_configuration: PositionsConfiguration,
         position_aircraftmodel_dependency: PositionsAircraftModelDependency,
-        t0: date = date.today(),
+        t_init: date = date.today(),
         t_last: date = None,
         initial_conditions: dict = None,
     ):
@@ -53,14 +53,15 @@ class Problem:
         self.jobs = jobs
         self.positions_configuration = positions_configuration
         self.positions = positions_configuration.positions
-        self.t0 = t0
+        self.t_init = t_init
+        self.t0 = t_init - timedelta(days=1)
         self.pos_aircraft_model_dependency = position_aircraftmodel_dependency
         self.aircraft_models = position_aircraftmodel_dependency.aircraft_models
         if t_last is None:
-            t_last = t0 + timedelta(days=365)
-        elif t_last <= t0:
+            t_last = self.t0 + timedelta(days=365)
+        elif t_last <= self.t0:
             raise ValueError(
-                f"Invalid date range: END_DATE ({t_last}) must be later than T0_DATE ({t0}). "
+                f"Invalid date range: END_DATE ({t_last}) must be later than T0_DATE ({self.t0}). "
                 f"Please correct the values in the initial conditions."
             )
         self.initial_conditions = initial_conditions
@@ -71,11 +72,13 @@ class Problem:
         )  # List of (var, value) of fixed variables. This can be used for initial or contour conditions.
 
         # --- Pre-processing ---#
-        trim_jobs_before_t0_inplace(jobs, t0)
+        trim_jobs_before_date_inplace(jobs, self.t0)
         trim_jobs_after_last_t_inplace(jobs, t_last)
 
         # Calculate compressed time scale
-        compressed_dates, date_to_index, index_to_date = compress_dates(jobs, [t0])
+        compressed_dates, date_to_index, index_to_date = compress_dates(
+            jobs, [self.t0, self.t_init]
+        )
         self.compressed_dates = compressed_dates
         self.date_to_index = date_to_index
         self.index_to_date = index_to_date
@@ -202,7 +205,13 @@ class Problem:
         self.fixed_variables.append((var, value))
 
     def _apply_initial_conditions_as_fixed_patterns(self):
-        t0_idx = 0  # assuming t0 is at index 0
+        """Apply to the initial conditions (at t0) of movements and assigments.
+
+        Raises:
+            ValueError: If there is not an active job for a given aircraft in t0.
+            ValueError: If the pattern assigned to a job is not valid for a given aircraft.
+        """
+        t_init_idx = self.date_to_index[self.t_init]
         pos_index = {p.name: idx for idx, p in enumerate(self.positions)}
         model_index = {model: idx for idx, model in enumerate(self.aircraft_models)}
         pattern_matrix = self.pos_aircraft_model_dependency.generate_matrix()
@@ -217,7 +226,7 @@ class Problem:
             # Find matching job
             job_idx = None
             for j_idx, job in enumerate(self.jobs):
-                if job.aircraft == aircraft and job.start <= self.t0 <= job.end:
+                if job.aircraft == aircraft and job.start <= self.t_init <= job.end:
                     job_idx = j_idx
                     break
             if job_idx is None:
@@ -233,7 +242,7 @@ class Problem:
                 }
                 if pattern_positions == assigned_pos_names:
                     self.add_fixed_pattern_assignment(
-                        job_idx, t0_idx, k_idx, value=True
+                        job_idx, t_init_idx, k_idx, value=True
                     )
                     matched = True
                     break

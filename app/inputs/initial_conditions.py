@@ -26,8 +26,8 @@ class InitialConditions:
     JOB_PATTERN_COL = "PATTERN"
 
     # Excel variable row names
-    T0_NAME = "T0_DATE"
-    T_LAST_NAME = "END_DATE"
+    T_INIT_NAME = "INIT_DATE"
+    T_LAST_NAME = "LATE_DATE"
 
     def __init__(
         self,
@@ -45,7 +45,7 @@ class InitialConditions:
         self.phases = phases
         self.aircraft_models = aircraft_models
 
-        self.t0 = None
+        self.t_init = None
         self.t_last = None
         self.initial_conditions = {}
 
@@ -106,8 +106,10 @@ class InitialConditions:
             for _, row in df.iterrows()
         }
 
-        self.t0 = date_vars.get("T0_DATE") or date.today()
-        self.t_last = date_vars.get("END_DATE") or (self.t0 + timedelta(days=365))
+        self.t_init = date_vars.get(self.T_INIT_NAME) or date.today()
+        self.t_last = date_vars.get(self.T_LAST_NAME) or (
+            self.t_init + timedelta(days=365)
+        )
 
     def _parse_initial_assignments(self, df):
         assignments_initial_conditions = {}
@@ -129,22 +131,24 @@ class InitialConditions:
             pos = position_map[position_name]
             aircraft = self.aircrafts[msn]
 
-            # Get the job active at t0
+            # Get the job active at t_init
             active_job = None
             for job in self.jobs:
-                if job.aircraft == aircraft and job.start <= self.t0 <= job.end:
+                if job.aircraft == aircraft and job.start <= self.t_init <= job.end:
                     active_job = job
                     break
 
             if not active_job:
-                raise ValueError(f"No active job at t0 {self.t0} for aircraft {msn}.")
+                raise ValueError(
+                    f"No active job at t_init {self.t_init} for aircraft {msn}."
+                )
 
             required_need = active_job.phase.required_need
 
             if required_need not in pos.available_needs:
                 raise ValueError(
                     f"Position '{position_name}' cannot fulfill required need '{required_need.name}' "
-                    f"for aircraft {msn} at t0."
+                    f"for aircraft {msn} at t_init."
                 )
 
             if aircraft not in assignments_initial_conditions:
@@ -197,7 +201,7 @@ class InitialConditions:
 
             # Parse START date
             if pd.isna(start_raw):
-                start = self.t0
+                start = self.t_init
             else:
                 start = start_raw.date()
 

@@ -111,22 +111,22 @@ def get_active_time_indices(
     return [date_to_index[d] for d in compressed_dates if job.start <= d <= job.end]
 
 
-def trim_jobs_before_t0_inplace(jobs: List[Job], t0: date) -> None:
+def trim_jobs_before_date_inplace(jobs: List[Job], date: date) -> None:
     """
     Modifies the given list of jobs in-place:
-    - Removes jobs that end before t0
-    - Adjusts start_date of jobs that overlap t0
+    - Removes jobs that end before date
+    - Adjusts start_date of jobs that overlap date
 
     Args:
         jobs: List of Job objects (modified in place).
-        t0: Start of planning horizon.
+        date: Start of planning horizon.
     """
     valid_job = []
     for job in jobs:
-        if job.end < t0:
+        if job.end < date:
             continue  # Drop it
-        if job.start < t0 <= job.end:
-            job.start = t0  # Trim start date
+        if job.start < date <= job.end:
+            job.start = date  # Trim start date
         valid_job.append(job)
 
     jobs.clear()

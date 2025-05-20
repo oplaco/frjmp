@@ -58,5 +58,5 @@ class ProblemTestSetup(BasicTestSetup):
         positions = [self.position1, self.position2, self.position3, self.position4]
         pc = PositionsConfiguration(positions=positions)
         pad = PositionsAircraftModelDependency(self.aircraft_models, positions)
-        t0 = self.date1
-        self.problem = Problem(jobs, pc, pad, t0)
+        self.t_init = self.date1
+        self.problem = Problem(jobs, pc, pad, self.t_init)
