@@ -5,3 +5,4 @@ data/
 real_example.py
 dailyplot_example.py
 app/main.py
+outputs/

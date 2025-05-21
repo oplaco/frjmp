@@ -58,12 +58,15 @@ class Problem:
         self.pos_aircraft_model_dependency = position_aircraftmodel_dependency
         self.aircraft_models = position_aircraftmodel_dependency.aircraft_models
         if t_last is None:
-            t_last = self.t0 + timedelta(days=365)
+            self.t_last = self.t0 + timedelta(days=365)
         elif t_last <= self.t0:
             raise ValueError(
                 f"Invalid date range: END_DATE ({t_last}) must be later than T0_DATE ({self.t0}). "
                 f"Please correct the values in the initial conditions."
             )
+        else:
+            self.t_last = t_last
+
         self.initial_conditions = initial_conditions
 
         # Other variables
@@ -73,7 +76,7 @@ class Problem:
 
         # --- Pre-processing ---#
         trim_jobs_before_date_inplace(jobs, self.t0)
-        trim_jobs_after_last_t_inplace(jobs, t_last)
+        trim_jobs_after_last_t_inplace(jobs, self.t_last)
 
         # Calculate compressed time scale
         compressed_dates, date_to_index, index_to_date = compress_dates(

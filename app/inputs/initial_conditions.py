@@ -27,7 +27,7 @@ class InitialConditions:
 
     # Excel variable row names
     T_INIT_NAME = "INIT_DATE"
-    T_LAST_NAME = "LATE_DATE"
+    T_LAST_NAME = "LAST_DATE"
 
     def __init__(
         self,
