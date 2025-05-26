@@ -141,12 +141,35 @@ class ProblemSetup:
         ):
             raise ValueError("Row/column names must match position names exactly.")
 
-        for from_name in matrix_rows:
-            from_pos = name_to_position[from_name]
-            for to_name in matrix_cols:
-                if int(df.loc[from_name, to_name]) == 1:
-                    to_pos = name_to_position[to_name]
-                    self.triggers.setdefault(from_pos, set()).add(to_pos)
+        self.triggers = {}  # Reset or initialize the new trigger map
+
+        for i, from_name in enumerate(matrix_rows):
+            for j, to_name in enumerate(matrix_cols):
+                if j <= i:
+                    continue  # Only process upper triangle
+
+                raw_value = str(df.loc[from_name, to_name]).strip()
+                if not raw_value or raw_value.lower() in ("nan", "none"):
+                    continue
+
+                triggered_names = [
+                    name.strip() for name in raw_value.split(";") if name.strip()
+                ]
+                triggered_positions = set()
+
+                for trg_name in triggered_names:
+                    if trg_name not in name_to_position:
+                        raise ValueError(
+                            f"Unknown position '{trg_name}' in trigger cell ({from_name} → {to_name})"
+                        )
+                    triggered_positions.add(name_to_position[trg_name])
+
+                from_pos = name_to_position[from_name]
+                to_pos = name_to_position[to_name]
+
+                # Store both directions as symmetric
+                self.triggers[(from_pos, to_pos)] = triggered_positions
+                self.triggers[(to_pos, from_pos)] = triggered_positions
 
     def _parse_aircraft_models(self, df) -> list[AircraftModel]:
         name_to_position = {p.name: p for p in self.positions}

@@ -122,6 +122,9 @@ class TestMovementConstraint(unittest.TestCase):
         add_movement_dependency_constraints(
             self.model,
             self.movement_in_position_vars,
+            self.aircraft_movement_vars,
+            self.pattern_assigned_vars,
+            self.jobs,
             pos_aircraft_model_dependency,
             num_timesteps=len(self.time_step_indexes),
         )

@@ -2,7 +2,7 @@ from frjmp.model.parameters.positions_configuration import PositionsConfiguratio
 from frjmp.model.sets.job import Job
 from collections import defaultdict
 from ortools.sat.python import cp_model
-from typing import Dict
+from typing import Dict, List, Tuple, Set
 from collections import defaultdict
 
 
@@ -31,7 +31,13 @@ def add_movement_detection_constraints(
     )
 
     add_movement_dependency_constraints(
-        model, movement_in_position_vars, positions_configuration, num_timesteps
+        model,
+        movement_in_position_vars,
+        aircraft_movement_vars,
+        pattern_assigned_vars,
+        jobs,
+        positions_configuration,
+        num_timesteps,
     )
 
     link_aircraft_movements_to_position_movements(
@@ -106,23 +112,106 @@ def add_aircraft_movement_constraint(
 
 
 def add_movement_dependency_constraints(
-    model, movement_in_position_vars, positions_configuration, num_timesteps
-):
-    dependency_matrix, index_map = positions_configuration.generate_matrix()
-    size = len(dependency_matrix)
-    for from_idx in range(size):
-        for to_idx in range(size):
-            if dependency_matrix[from_idx][to_idx] == 1:
-                for t in range(num_timesteps):
-                    try:
-                        var_from = movement_in_position_vars[from_idx][t]
-                        var_to = movement_in_position_vars[to_idx][t]
-                        model.AddImplication(var_from, var_to)
-                    except KeyError:
-                        raise ValueError(
-                            "Invalid entrance in add_movement_dependency_constraints"
-                        )
-                        # continue  # skip invalid entries
+    model: cp_model.CpModel,
+    movement_in_position_vars: Dict[int, Dict[int, cp_model.IntVar]],
+    aircraft_movement_vars: Dict[str, Dict[int, cp_model.IntVar]],
+    pattern_assigned_vars: Dict[int, Dict[int, Dict[int, cp_model.IntVar]]],
+    jobs: List,
+    positions_configuration,
+    num_timesteps: int,
+) -> None:
+    """
+    When aircraft is movev from pattern k0 to pattern k1 every possition in k0 and k1
+    register a position movement. Then each position movement might trigger more position
+    movements based on the dependency matrix dep_matrix[i][j][k]
+
+    For every aircraft and every timestep t → t+1:
+        * Detect the pattern k₀ the aircraft occupies at t
+        * Detect the pattern k₁ it occupies at t+1
+        * Create a Boolean hop variable  hop_{k₀→k₁,t}
+        * If that hop is active, then
+              – every position in k₀ (vacated) must register movement
+              – every position in k₁ (entered) must register movement
+              – every position triggered by (p_out, p_in) pairs must register movement
+    Trigger logic uses a 3-D matrix:
+        dep_matrix[i][j][k] == 1  ⇒  moving   i → j   triggers position k.
+    """
+    # Dependency / trigger lookup
+    dep_matrix, index_map = positions_configuration.generate_matrix()
+    P = len(dep_matrix)
+
+    # (i, j)  → {k1, k2, …}
+    trigger_map: Dict[Tuple[int, int], Set[int]] = {
+        (i, j): {k for k, v in enumerate(dep_matrix[i][j]) if v}
+        for i in range(P)
+        for j in range(P)
+        if any(dep_matrix[i][j])
+    }
+
+    # helper: Pattern  →  list[int] (indices in 0‥P-1)
+    def pattern_indices(pattern) -> List[int]:
+        try:
+            return [index_map[pos.name] for pos in pattern.positions]
+        except KeyError as err:
+            raise ValueError(
+                f"Position {err.args[0]} in Pattern not in positions_configuration"
+            ) from None
+
+    # Group job-indices by aircraft
+    jobs_by_ac = defaultdict(list)  # ac_name → list[j_idx]
+    for j_idx, job in enumerate(jobs):
+        jobs_by_ac[job.aircraft.name].append(j_idx)
+
+    # Build constraints
+    for ac_name, job_idxs in jobs_by_ac.items():
+        ac_mov_dict = aircraft_movement_vars.get(ac_name, {})
+
+        # All jobs of this aircraft share the same AircraftModel
+        aircraft_model = jobs[job_idxs[0]].aircraft.model
+        allowed_patterns = aircraft_model.allowed_patterns  # list[Pattern]
+
+        for t in range(num_timesteps - 1):  # Can not evaluate t+1
+            ac_mov_t = ac_mov_dict[t]
+            # --- collect (k_idx, BoolVar) pairs for t and t+1 -----------
+            pat_vars_t: List[Tuple[int, cp_model.IntVar]] = []
+            pat_vars_t1: List[Tuple[int, cp_model.IntVar]] = []
+
+            for j in job_idxs:
+                if t in pattern_assigned_vars[j]:
+                    pat_vars_t.extend(pattern_assigned_vars[j][t].items())
+                if t + 1 in pattern_assigned_vars[j]:
+                    pat_vars_t1.extend(pattern_assigned_vars[j][t + 1].items())
+
+            # Aircraft inactive in one slice?  Nothing to do
+            if not pat_vars_t or not pat_vars_t1:
+                continue
+
+            # ----------------- iterate over every possible hop ---------- #
+            for k0_idx, var_k0 in pat_vars_t:
+                for k1_idx, var_k1 in pat_vars_t1:
+                    hop = model.NewBoolVar(f"hop_{ac_name}_k{k0_idx}_k{k1_idx}_t{t}")
+
+                    # hop ⇒  ac moved AND pattern k0 active AND pattern k1 active
+                    model.Add(hop == 1).OnlyEnforceIf([ac_mov_t, var_k0, var_k1])
+
+                    # Positions touched by this hop
+                    pos_k0 = pattern_indices(allowed_patterns[k0_idx])
+                    pos_k1 = pattern_indices(allowed_patterns[k1_idx])
+                    touched: Set[int] = set(pos_k0) | set(pos_k1)
+
+                    # triggered positions
+                    for p_out in pos_k0:
+                        for p_in in pos_k1:
+                            touched.update(trigger_map.get((p_out, p_in), ()))
+
+                    for p in touched:
+                        try:
+                            pos_mov = movement_in_position_vars[p][t]
+                        except KeyError:
+                            raise ValueError(
+                                f"Missing movement var for position {p} at t={t}"
+                            )
+                        model.AddImplication(hop, pos_mov)
 
 
 def link_aircraft_movements_to_position_movements(
