@@ -14,9 +14,9 @@ class ProblemSetup:
     # Excel sheet names
     PHASE_NEED_LINK_SHEET = "PHASE_NEED_LINK"
     POSITION_SHEET = "POSITION"
-    MOVEMENT_DEPENDENCY_SHEET = "MOVEMENT_DEPENDENCY"
+    MOVEMENT_PATH_SHEET = "MOVEMENT_PATH"
     AIRCRAFT_MODEL_SHEET = "AIRCRAFT_MODEL"
-    REQUIRED_SHEETS = {PHASE_NEED_LINK_SHEET, POSITION_SHEET, MOVEMENT_DEPENDENCY_SHEET}
+    REQUIRED_SHEETS = {PHASE_NEED_LINK_SHEET, POSITION_SHEET, MOVEMENT_PATH_SHEET}
 
     # Excel columns titles
     NEED_COL = "NEED"
@@ -27,12 +27,23 @@ class ProblemSetup:
     # Default waiting need name.
     WAITING_NEED = "WAITING"
 
+    # Separators
+    PATTERN_SEPARATOR = ";"
+    AIRCRAFT_MODEL_SEPARATOR = ","
+    PATH_POSITION_SEPARATOR = ";"
+    # All the positions before the separator are part of the path towards the outside
+    # and all the positions after the separator are parth of the path from the outside
+    # towards the target position.
+    PATH_DIRECTION_SEPARATOR = "OUT"
+
     def __init__(self, filepath: str):
         self.filepath = filepath
         self.positions = []
         self.needs = []
         self.phases = []
         self.triggers = {}
+        self.in_paths = {}
+        self.out_paths = {}
         self.load()
 
     def load(self):
@@ -43,7 +54,7 @@ class ProblemSetup:
 
         df_phase_need_link = xls.parse(self.PHASE_NEED_LINK_SHEET)
         df_position = xls.parse(self.POSITION_SHEET)
-        df_movement_depedency = xls.parse(self.MOVEMENT_DEPENDENCY_SHEET, index_col=0)
+        df_movement_depedency = xls.parse(self.MOVEMENT_PATH_SHEET, index_col=0)
         df_aircraft_model = xls.parse(self.AIRCRAFT_MODEL_SHEET)
 
         self._parse_needs(df_phase_need_link)
@@ -52,7 +63,7 @@ class ProblemSetup:
         self._parse_movement_dependency(df_movement_depedency)
         self._parse_aircraft_models(df_aircraft_model)
         self.positions_configuration = PositionsConfiguration(
-            self.positions, self.triggers
+            self.positions, self.triggers, self.out_paths, self.in_paths
         )
         self.position_aircraftmodel_dependency = PositionsAircraftModelDependency(
             self.aircraft_models_list, self.positions
@@ -141,7 +152,9 @@ class ProblemSetup:
         ):
             raise ValueError("Row/column names must match position names exactly.")
 
-        self.triggers = {}  # Reset or initialize the new trigger map
+        self.triggers = {}
+        self.in_paths = {}
+        self.out_paths = {}
 
         for i, from_name in enumerate(matrix_rows):
             for j, to_name in enumerate(matrix_cols):
@@ -152,24 +165,53 @@ class ProblemSetup:
                 if not raw_value or raw_value.lower() in ("nan", "none"):
                     continue
 
-                triggered_names = [
-                    name.strip() for name in raw_value.split(";") if name.strip()
+                triggered_pos_names = [
+                    name.strip()
+                    for name in raw_value.split(self.PATH_POSITION_SEPARATOR)
+                    if name.strip()
                 ]
-                triggered_positions = set()
 
-                for trg_name in triggered_names:
-                    if trg_name not in name_to_position:
-                        raise ValueError(
-                            f"Unknown position '{trg_name}' in trigger cell ({from_name} → {to_name})"
-                        )
-                    triggered_positions.add(name_to_position[trg_name])
+                if self.PATH_DIRECTION_SEPARATOR in triggered_pos_names:
+                    idx = triggered_pos_names.index(self.PATH_DIRECTION_SEPARATOR)
+                    before = triggered_pos_names[:idx]
+                    after = triggered_pos_names[idx + 1 :]
+                else:
+                    before = []
+                    after = []
+                before_positions = []
+                after_positions = []
 
                 from_pos = name_to_position[from_name]
                 to_pos = name_to_position[to_name]
 
-                # Store both directions as symmetric
-                self.triggers[(from_pos, to_pos)] = triggered_positions
-                self.triggers[(to_pos, from_pos)] = triggered_positions
+                for pos_name in before:
+                    if pos_name not in name_to_position:
+                        raise ValueError(
+                            f"Unknown position '{pos_name}' in dependency cell ({from_name} → {to_name})"
+                        )
+                    before_positions.append(name_to_position[pos_name])
+
+                for pos_name in after:
+                    if pos_name not in name_to_position:
+                        raise ValueError(
+                            f"Unknown position '{pos_name}' in dependency cell ({from_name} → {to_name})"
+                        )
+                    after_positions.append(name_to_position[pos_name])
+
+                # Store both triggers directions as symmetric.
+                self.triggers[(from_pos, to_pos)] = set(
+                    before_positions + after_positions
+                )
+                self.triggers[(to_pos, from_pos)] = set(
+                    before_positions + after_positions
+                )
+
+                # Store both out_pahts and in_paths as assymetric.
+                self.out_paths[(from_pos, to_pos)] = before_positions
+                self.in_paths[(from_pos, to_pos)] = after_positions
+
+                self.out_paths[(to_pos, from_pos)] = after_positions[::-1]
+                self.in_paths[(to_pos, from_pos)] = before_positions[::-1]
 
     def _parse_aircraft_models(self, df) -> list[AircraftModel]:
         name_to_position = {p.name: p for p in self.positions}
@@ -185,10 +227,13 @@ class ProblemSetup:
                 models[model_name] = model
                 continue  # No patterns defined
 
-            # Cada patrón separado por ";"
-            pattern_groups = pattern_str.split(";")
+            pattern_groups = pattern_str.split(self.PATTERN_SEPARATOR)
             for group in pattern_groups:
-                position_names = [p.strip() for p in group.split(",") if p.strip()]
+                position_names = [
+                    p.strip()
+                    for p in group.split(self.AIRCRAFT_MODEL_SEPARATOR)
+                    if p.strip()
+                ]
                 pattern_positions = []
 
                 for pname in position_names:

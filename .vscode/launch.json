@@ -1,9 +1,9 @@
 {"configurations": [
     {
-        "name": "Python: Run example",
+        "name": "Python: Output example",
         "type": "python",
         "request": "launch",
-        "program": "${workspaceFolder}/examples/basic_example.py",
+        "program": "${workspaceFolder}/app/outputs/movement.py",
         "cwd": "${workspaceFolder}"
     }
 ]}
