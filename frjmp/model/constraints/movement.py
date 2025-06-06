@@ -157,6 +157,22 @@ def add_movement_dependency_constraints(
                 f"Position {err.args[0]} in Pattern not in positions_configuration"
             ) from None
 
+    def movement_dependency_helper(
+        pos_k0, pos_k1, t, trigger_map, model, movement_in_position_vars, hop
+    ):
+        touched: Set[int] = set(pos_k0) | set(pos_k1)
+        # triggered positions
+        for p_out in pos_k0:
+            for p_in in pos_k1:
+                touched.update(trigger_map.get((p_out, p_in), ()))
+
+        for p in touched:
+            try:
+                pos_mov = movement_in_position_vars[p][t]
+            except KeyError:
+                raise ValueError(f"Missing movement var for position {p} at t={t}")
+            model.AddImplication(hop, pos_mov)
+
     # Group job-indices by aircraft
     jobs_by_ac = defaultdict(list)  # ac_name → list[j_idx]
     for j_idx, job in enumerate(jobs):
@@ -182,36 +198,84 @@ def add_movement_dependency_constraints(
                 if t + 1 in pattern_assigned_vars[j]:
                     pat_vars_t1.extend(pattern_assigned_vars[j][t + 1].items())
 
+            if ac_name == "ALPHA" and t == 0:
+                pass
             # Aircraft inactive in one slice?  Nothing to do
-            if not pat_vars_t or not pat_vars_t1:
+            if not pat_vars_t and not pat_vars_t1:
                 continue
 
-            # ----------------- iterate over every possible hop ---------- #
-            for k0_idx, var_k0 in pat_vars_t:
+            if not pat_vars_t and pat_vars_t1:
+                # ----------------- iterate over every possible hop ---------- #
                 for k1_idx, var_k1 in pat_vars_t1:
-                    hop = model.NewBoolVar(f"hop_{ac_name}_k{k0_idx}_k{k1_idx}_t{t}")
+                    hop = model.NewBoolVar(f"hop_{ac_name}_k{k1_idx}_t{t}")
 
                     # hop ⇒  ac moved AND pattern k0 active AND pattern k1 active
-                    model.Add(hop == 1).OnlyEnforceIf([ac_mov_t, var_k0, var_k1])
+                    model.Add(hop == 1).OnlyEnforceIf([ac_mov_t, var_k1])
+
+                    # Positions touched by this hop
+                    pos_k0 = pattern_indices(
+                        allowed_patterns[0]
+                    )  # We need to add an OUT position in the future, currently use position 0 which has direct access to OUT.
+                    pos_k1 = pattern_indices(allowed_patterns[k1_idx])
+
+                    movement_dependency_helper(
+                        pos_k0,
+                        pos_k1,
+                        t,
+                        trigger_map,
+                        model,
+                        movement_in_position_vars,
+                        hop,
+                    )
+
+            elif pat_vars_t and not pat_vars_t1:
+                # ----------------- iterate over every possible hop ---------- #
+                for k0_idx, var_k0 in pat_vars_t:
+                    hop = model.NewBoolVar(f"hop_{ac_name}_k{k0_idx}_t{t}")
+
+                    # hop ⇒  ac moved AND pattern k0 active AND pattern k1 active
+                    model.Add(hop == 1).OnlyEnforceIf([ac_mov_t, var_k0])
 
                     # Positions touched by this hop
                     pos_k0 = pattern_indices(allowed_patterns[k0_idx])
-                    pos_k1 = pattern_indices(allowed_patterns[k1_idx])
-                    touched: Set[int] = set(pos_k0) | set(pos_k1)
+                    pos_k1 = pattern_indices(
+                        allowed_patterns[0]
+                    )  # We need to add an OUT position in the future, currently use position 0 which has direct access to OUT.
 
-                    # triggered positions
-                    for p_out in pos_k0:
-                        for p_in in pos_k1:
-                            touched.update(trigger_map.get((p_out, p_in), ()))
+                    movement_dependency_helper(
+                        pos_k0,
+                        pos_k1,
+                        t,
+                        trigger_map,
+                        model,
+                        movement_in_position_vars,
+                        hop,
+                    )
 
-                    for p in touched:
-                        try:
-                            pos_mov = movement_in_position_vars[p][t]
-                        except KeyError:
-                            raise ValueError(
-                                f"Missing movement var for position {p} at t={t}"
-                            )
-                        model.AddImplication(hop, pos_mov)
+            # ----------------- iterate over every possible hop ---------- #
+            else:
+                for k0_idx, var_k0 in pat_vars_t:
+                    for k1_idx, var_k1 in pat_vars_t1:
+                        hop = model.NewBoolVar(
+                            f"hop_{ac_name}_k{k0_idx}_k{k1_idx}_t{t}"
+                        )
+
+                        # hop ⇒  ac moved AND pattern k0 active AND pattern k1 active
+                        model.Add(hop == 1).OnlyEnforceIf([ac_mov_t, var_k0, var_k1])
+
+                        # Positions touched by this hop
+                        pos_k0 = pattern_indices(allowed_patterns[k0_idx])
+                        pos_k1 = pattern_indices(allowed_patterns[k1_idx])
+
+                        movement_dependency_helper(
+                            pos_k0,
+                            pos_k1,
+                            t,
+                            trigger_map,
+                            model,
+                            movement_in_position_vars,
+                            hop,
+                        )
 
 
 def link_aircraft_movements_to_position_movements(

@@ -57,6 +57,7 @@ def plot_solution(problem, solver):
     # 6. Plot step snapshots
     background_path = "data/background.PNG"
     position_geometry = {
+        "OUT": [(0, 0), (0, 1), (1, 1), (1, 0)],
         "H2_1": [(2.6, 4.6), (2.6, 4.2), (2.3, 4.2), (2.3, 4.6)],
         "H2_2": [(2.6, 4.1), (2.6, 3.7), (2.3, 3.7), (2.3, 4.1)],
         "H2_3": [(2.3, 4.6), (2.3, 4.2), (2, 4.2), (2, 4.6)],
