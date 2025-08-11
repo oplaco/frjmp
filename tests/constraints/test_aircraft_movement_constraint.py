@@ -252,8 +252,8 @@ class TestMovementConstraint(unittest.TestCase):
         unit_name = self.unit.name
         source_pattern_idx = 0
         target_pattern_idx = 1
-        source_pattern = self.unit.model.allowed_patterns[source_pattern_idx]
-        target_pattern = self.unit.model.allowed_patterns[target_pattern_idx]
+        source_pattern = self.unit.type.allowed_patterns[source_pattern_idx]
+        target_pattern = self.unit.type.allowed_patterns[target_pattern_idx]
 
         self.model.Add(self.pattern_assigned_vars[0][t0_idx][source_pattern_idx] == 1)
         for pos in source_pattern.positions + target_pattern.positions:

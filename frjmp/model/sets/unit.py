@@ -26,9 +26,9 @@ class UnitType:
 
 
 class Unit:
-    def __init__(self, name: str, model: UnitType):
+    def __init__(self, name: str, type: UnitType):
         self.name = name
-        self.model = model
+        self.type = type
 
     def __str__(self):
         return self.name

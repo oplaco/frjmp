@@ -221,7 +221,7 @@ class Problem:
 
         for unit, assigned_positions in self.initial_conditions["assignments"].items():
             assigned_pos_names = {pos.name for pos in assigned_positions}
-            model = unit.model
+            model = unit.type
             model_idx = model_index[model]
 
             # Find matching job

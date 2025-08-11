@@ -183,7 +183,7 @@ def add_movement_dependency_constraints(
         ac_mov_dict = unit_movement_vars.get(ac_name, {})
 
         # All jobs of this unit share the same UnitType
-        unit_model = jobs[job_idxs[0]].unit.model
+        unit_model = jobs[job_idxs[0]].unit.type
         allowed_patterns = unit_model.allowed_patterns  # list[Pattern]
 
         for t in range(num_timesteps - 1):  # Can not evaluate t+1

@@ -31,7 +31,7 @@ def create_pattern_assignment_variables(
     for j_idx, job in enumerate(jobs):
         pattern_assigned_vars[j_idx] = {}
 
-        model_idx = model_to_index[job.unit.model]
+        model_idx = model_to_index[job.unit.type]
         n_patterns = len(matrix[model_idx])
 
         active_time_indices = get_active_time_indices(
@@ -67,7 +67,7 @@ def create_pattern_assignment_variables(
                         )
                     ]
                     # warnings.warn(
-                    #     f"Skipped pattern {k_idx} for Job {job} (UnitType={job.unit.model}) at t={t_idx}: "
+                    #     f"Skipped pattern {k_idx} for Job {job} (UnitType={job.unit.type}) at t={t_idx}: "
                     #     f"positions {incompatible_pos_names} do not cover job need ({job.phase.required_need}).",
                     #     stacklevel=2,
                     # )

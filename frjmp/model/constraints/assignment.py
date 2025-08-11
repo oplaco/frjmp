@@ -31,7 +31,7 @@ def add_job_assignment_constraints(
     model_to_index = {model: idx for idx, model in enumerate(unit_types)}
 
     for j_idx, job in enumerate(jobs):
-        model_idx = model_to_index[job.unit.model]
+        model_idx = model_to_index[job.unit.type]
         n_patterns = len(matrix[model_idx])
         for t_date in compressed_dates:
             if not (job.start <= t_date <= job.end):

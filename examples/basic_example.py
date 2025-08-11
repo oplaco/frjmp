@@ -89,7 +89,7 @@ if status == 4:
         for t_idx, t_dict in j_dict.items():
             for k_idx, var in t_dict.items():
                 if solver.Value(var) == 1:
-                    pattern = job.unit.model.allowed_patterns[k_idx]
+                    pattern = job.unit.type.allowed_patterns[k_idx]
                     pos_names = [p.name for p in pattern.positions]
                     print(
                         f"Job {j_idx} at t={t_idx} ({problem.index_to_date[t_idx]}): "
