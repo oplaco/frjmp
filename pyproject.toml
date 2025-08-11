@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "frjmp"
+version = "0.1.0.dev" 
+description = "Google OR-Tools wrapper for solving a Flexible Reactive Job Shop Movement Problem (FRJMP)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["ortools", "matplotlib"]
+
+[project.optional-dependencies]
+dev = ["black", "pytest"]
