@@ -2,14 +2,14 @@ import unittest
 from datetime import date
 
 from frjmp.model.problem import Problem
-from frjmp.model.sets.aircraft import Aircraft, AircraftModel
+from frjmp.model.sets.unit import Unit, UnitType
 from frjmp.model.sets.need import Need
 from frjmp.model.sets.job import Job
 from frjmp.model.sets.phase import Phase
 from frjmp.model.sets.position import Position
 from frjmp.model.parameters.positions_configuration import PositionsConfiguration
-from frjmp.model.parameters.position_aircraft_model import (
-    PositionsAircraftModelDependency,
+from frjmp.model.parameters.position_unit_model import (
+    PositionsUnitTypeDependency,
 )
 
 
@@ -37,19 +37,19 @@ class BasicTestSetup(unittest.TestCase):
         self.date3 = date(2025, 2, 12)
         self.date4 = date(2025, 3, 4)
 
-        self.aircraft_model = AircraftModel("C295")
-        self.aircraft_models = [self.aircraft_model]
-        self.aircraft1 = Aircraft("MSN 001", self.aircraft_model)
-        self.aircraft2 = Aircraft("MSN 002", self.aircraft_model)
-        self.aircraft3 = Aircraft("MSN 003", self.aircraft_model)
+        self.unit_model = UnitType("C295")
+        self.unit_types = [self.unit_model]
+        self.unit1 = Unit("MSN 001", self.unit_model)
+        self.unit2 = Unit("MSN 002", self.unit_model)
+        self.unit3 = Unit("MSN 003", self.unit_model)
 
 
 class ProblemTestSetup(BasicTestSetup):
     def setUp(self):
         super().setUp()
-        job1 = Job(self.aircraft1, self.phase1, self.date1, self.date3)
-        job2 = Job(self.aircraft2, self.phase1, self.date1, self.date2)
-        job3 = Job(self.aircraft3, self.phase1, self.date1, self.date2)
+        job1 = Job(self.unit1, self.phase1, self.date1, self.date3)
+        job2 = Job(self.unit2, self.phase1, self.date1, self.date2)
+        job3 = Job(self.unit3, self.phase1, self.date1, self.date2)
         jobs = [job1, job2, job3]
         self.position1 = Position("Hangar A", [self.need1], capacity=1)
         self.position2 = Position("Hangar B", [self.need1], capacity=1)
@@ -57,6 +57,6 @@ class ProblemTestSetup(BasicTestSetup):
         self.position4 = Position("Hangar D", [self.need1], capacity=1)
         positions = [self.position1, self.position2, self.position3, self.position4]
         pc = PositionsConfiguration(positions=positions)
-        pad = PositionsAircraftModelDependency(self.aircraft_models, positions)
+        pad = PositionsUnitTypeDependency(self.unit_types, positions)
         self.t_init = self.date1
         self.problem = Problem(jobs, pc, pad, self.t_init)

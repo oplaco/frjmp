@@ -7,10 +7,12 @@ if __name__ == "__main__":
 from datetime import date, timedelta
 from frjmp.model.sets.need import Need
 from frjmp.model.sets.phase import Phase
-from frjmp.model.sets.aircraft import Aircraft, AircraftModel
+from frjmp.model.sets.unit import Unit, UnitType
 from frjmp.model.sets.position import Position
 from frjmp.model.sets.job import Job
 from frjmp.model.problem import Problem
+from frjmp.model.parameters.positions_configuration import PositionsConfiguration
+from frjmp.model.parameters.position_unit_model import PositionsUnitTypeDependency
 from examples.plot_example import plot_solution
 from frjmp.utils.preprocessing_utils import insert_waiting_jobs
 
@@ -24,12 +26,12 @@ edv_phase = Phase("EDV", edv_need)
 foury_phase = Phase("4Y", wp_need)
 waiting_phase = Phase("WAITING", wp_need)
 
-# Create Aircraft
-c295 = AircraftModel("C295")
-a400m = AircraftModel("A400M")
-aircraft_models = [c295, a400m]
-a1 = Aircraft("185", c295)
-a2 = Aircraft("187", a400m)
+# Create Unit
+c295 = UnitType("C295")
+a400m = UnitType("A400M")
+unit_types = [c295, a400m]
+a1 = Unit("185", c295)
+a2 = Unit("187", a400m)
 
 # t_init
 t_init = date(2025, 4, 15)
@@ -47,10 +49,17 @@ posA = Position("Hangar A", [edv_need, wp_need, waiting_phase])
 posB = Position("Hangar B", [edv_need, wp_need, waiting_phase])
 
 positions = [posA, posB]
+conf = PositionsConfiguration(positions)
+pos_unit_dep = PositionsUnitTypeDependency(unit_types, positions)
 
 
 # Initialize Problem
-problem = Problem(aircraft_models, jobs, positions, t_init)
+problem = Problem(
+    jobs=jobs,
+    positions_configuration=conf,
+    position_unittype_dependency=pos_unit_dep,
+    t_init=t_init,
+)
 
 
 # Solve
@@ -60,7 +69,7 @@ status, solver = problem.solve()
 print("\nSolution:")
 if status == 4:
     print("\nOptimal Solution found:")
-    for j_idx, j_dict in problem.aircraft_movement_vars.items():
+    for j_idx, j_dict in problem.unit_movement_vars.items():
         for t_idx, var in j_dict.items():
             if solver.Value(var) == 1:
                 print(
@@ -80,7 +89,7 @@ if status == 4:
         for t_idx, t_dict in j_dict.items():
             for k_idx, var in t_dict.items():
                 if solver.Value(var) == 1:
-                    pattern = job.aircraft.model.allowed_patterns[k_idx]
+                    pattern = job.unit.model.allowed_patterns[k_idx]
                     pos_names = [p.name for p in pattern.positions]
                     print(
                         f"Job {j_idx} at t={t_idx} ({problem.index_to_date[t_idx]}): "

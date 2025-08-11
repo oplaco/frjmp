@@ -5,7 +5,7 @@ from frjmp.model.sets.job import Job
 from frjmp.model.sets.position import Position
 from frjmp.utils.validation_utils import (
     validate_capacity_feasibility,
-    validate_non_overlapping_jobs_per_aircraft,
+    validate_non_overlapping_jobs_per_unit,
 )
 from tests.setup import BasicTestSetup
 
@@ -21,8 +21,8 @@ class TestCapacityValidation(BasicTestSetup):
     def test_single_need_globally_overbooked_fails(self):
         """2 units of need1 are required per day but only 1 is available"""
         jobs = [
-            Job(self.aircraft1, self.phase1, self.date1, self.date2),
-            Job(self.aircraft2, self.phase1, self.date1, self.date2),
+            Job(self.unit1, self.phase1, self.date1, self.date2),
+            Job(self.unit2, self.phase1, self.date1, self.date2),
         ]
         positions = [Position("Hangar A", [self.need1], capacity=1)]
 
@@ -34,9 +34,9 @@ class TestCapacityValidation(BasicTestSetup):
     def test_multiple_need_locally_overbooked_fails(self):
         """3 units of need1 are required per day but only 1 is available as the rest of positions can not serve this need."""
         jobs = [
-            Job(self.aircraft1, self.phase1, self.date1, self.date2),
-            Job(self.aircraft2, self.phase1, self.date1, self.date2),
-            Job(self.aircraft3, self.phase1, self.date1, self.date2),
+            Job(self.unit1, self.phase1, self.date1, self.date2),
+            Job(self.unit2, self.phase1, self.date1, self.date2),
+            Job(self.unit3, self.phase1, self.date1, self.date2),
         ]
         positions = [
             Position("Hangar A", [self.need1], capacity=1),
@@ -52,9 +52,9 @@ class TestCapacityValidation(BasicTestSetup):
         the 3 needs but has not enough capacity at the same. It should fail
         """
         jobs = [
-            Job(self.aircraft1, self.phase1, self.date1, self.date2),
-            Job(self.aircraft2, self.phase2, self.date1, self.date2),
-            Job(self.aircraft3, self.phase4, self.date1, self.date2),
+            Job(self.unit1, self.phase1, self.date1, self.date2),
+            Job(self.unit2, self.phase2, self.date1, self.date2),
+            Job(self.unit3, self.phase4, self.date1, self.date2),
         ]
         positions = [
             Position("Hangar A", [self.need1, self.need2, self.need3], capacity=1),
@@ -78,8 +78,8 @@ class TestCapacityValidation(BasicTestSetup):
     def test_single_need_enough_capacity_pass(self):
         """2 units of need1 is required per day and a position with capacity 2 is given"""
         jobs = [
-            Job(self.aircraft1, self.phase1, self.date1, self.date2),
-            Job(self.aircraft2, self.phase1, self.date1, self.date2),
+            Job(self.unit1, self.phase1, self.date1, self.date2),
+            Job(self.unit2, self.phase1, self.date1, self.date2),
         ]
         positions = [Position("Hangar A", [self.need1], capacity=2)]
 
@@ -91,47 +91,47 @@ class TestCapacityValidation(BasicTestSetup):
 
 
 class TestOverlappingJobValidation(BasicTestSetup):
-    """Test validate_non_overlapping_jobs_per_aircraft function"""
+    """Test validate_non_overlapping_jobs_per_unit function"""
 
-    def test_on_job_overlap_for_same_aircraft_fails(self):
+    def test_on_job_overlap_for_same_unit_fails(self):
         # End date exact overlap
         jobs = [
-            Job(self.aircraft1, self.phase1, date(2025, 4, 10), date(2025, 4, 15)),
-            Job(self.aircraft1, self.phase2, date(2025, 4, 15), date(2025, 4, 20)),
+            Job(self.unit1, self.phase1, date(2025, 4, 10), date(2025, 4, 15)),
+            Job(self.unit1, self.phase2, date(2025, 4, 15), date(2025, 4, 20)),
         ]
         with self.assertRaises(ValueError):
-            validate_non_overlapping_jobs_per_aircraft(jobs)
+            validate_non_overlapping_jobs_per_unit(jobs)
 
         # Start date exact overlap
         jobs = [
-            Job(self.aircraft1, self.phase1, date(2025, 4, 10), date(2025, 4, 15)),
-            Job(self.aircraft1, self.phase2, date(2025, 1, 15), date(2025, 4, 10)),
+            Job(self.unit1, self.phase1, date(2025, 4, 10), date(2025, 4, 15)),
+            Job(self.unit1, self.phase2, date(2025, 1, 15), date(2025, 4, 10)),
         ]
         with self.assertRaises(ValueError):
-            validate_non_overlapping_jobs_per_aircraft(jobs)
+            validate_non_overlapping_jobs_per_unit(jobs)
 
         # Between start and end date overlap
         jobs = [
-            Job(self.aircraft1, self.phase1, date(2025, 4, 10), date(2025, 4, 15)),
-            Job(self.aircraft1, self.phase2, date(2025, 4, 12), date(2025, 4, 13)),
+            Job(self.unit1, self.phase1, date(2025, 4, 10), date(2025, 4, 15)),
+            Job(self.unit1, self.phase2, date(2025, 4, 12), date(2025, 4, 13)),
         ]
         with self.assertRaises(ValueError):
-            validate_non_overlapping_jobs_per_aircraft(jobs)
+            validate_non_overlapping_jobs_per_unit(jobs)
 
     def test_when_jobs_do_not_overlap_pass(self):
         # No date overlap
         jobs = [
-            Job(self.aircraft1, self.phase1, date(2025, 4, 10), date(2025, 4, 13)),
-            Job(self.aircraft1, self.phase1, date(2025, 4, 14), date(2025, 4, 20)),
+            Job(self.unit1, self.phase1, date(2025, 4, 10), date(2025, 4, 13)),
+            Job(self.unit1, self.phase1, date(2025, 4, 14), date(2025, 4, 20)),
         ]
-        validate_non_overlapping_jobs_per_aircraft(jobs)  # Should not raise
+        validate_non_overlapping_jobs_per_unit(jobs)  # Should not raise
 
-        # Overlap but not the same aircraft
+        # Overlap but not the same unit
         jobs = [
-            Job(self.aircraft1, self.phase1, date(2025, 4, 10), date(2025, 4, 15)),
-            Job(self.aircraft2, self.phase1, date(2025, 4, 12), date(2025, 4, 13)),
+            Job(self.unit1, self.phase1, date(2025, 4, 10), date(2025, 4, 15)),
+            Job(self.unit2, self.phase1, date(2025, 4, 12), date(2025, 4, 13)),
         ]
-        validate_non_overlapping_jobs_per_aircraft(jobs)  # Should not raise
+        validate_non_overlapping_jobs_per_unit(jobs)  # Should not raise
 
 
 if __name__ == "__main__":

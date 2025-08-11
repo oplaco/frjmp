@@ -11,7 +11,7 @@ The problem can be solved witouth them. These functions are related with prepoce
 
 def insert_waiting_jobs(jobs: List[Job], phase_waiting) -> List[Job]:
     """
-    Inserts artificial waiting jobs between real jobs of the same aircraft
+    Inserts artificial waiting jobs between real jobs of the same unit
     when there is a gap greater than one day between them.
 
     Args:
@@ -21,21 +21,21 @@ def insert_waiting_jobs(jobs: List[Job], phase_waiting) -> List[Job]:
     Returns:
         List of original + artificial jobs
     """
-    jobs_by_aircraft = defaultdict(list)
+    jobs_by_unit = defaultdict(list)
     for job in jobs:
-        jobs_by_aircraft[job.aircraft.name].append(job)
+        jobs_by_unit[job.unit.name].append(job)
 
     new_jobs = list(jobs)
 
-    for aircraft_name, aircraft_jobs in jobs_by_aircraft.items():
-        sorted_jobs = sorted(aircraft_jobs, key=lambda j: j.start)
+    for unit_name, unit_jobs in jobs_by_unit.items():
+        sorted_jobs = sorted(unit_jobs, key=lambda j: j.start)
         for i in range(len(sorted_jobs) - 1):
             current = sorted_jobs[i]
             next_job = sorted_jobs[i + 1]
             expected_next_day = current.end + timedelta(days=1)
             if next_job.start > expected_next_day:
                 waiting_job = Job(
-                    aircraft=current.aircraft,
+                    unit=current.unit,
                     phase=phase_waiting,
                     start=expected_next_day,
                     end=next_job.start - timedelta(days=1),

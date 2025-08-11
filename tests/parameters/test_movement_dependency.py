@@ -39,7 +39,7 @@ class TestMovementDependency(ProblemTestSetup):
 
     def test_dependant_movements(self):
         """Test if a position movement in position1 to position4 triggers a position movement in position2 and position3.
-        Test if the corresponding aircraft movements are created.
+        Test if the corresponding unit movements are created.
         """
         self.problem.positions = [
             self.position1,
@@ -61,7 +61,7 @@ class TestMovementDependency(ProblemTestSetup):
         self.problem.model.Add(
             self.problem.pattern_assigned_vars[0][t_init_idx + 1][3] == 1
         )
-        #   For assigments of other aircrafts at t_init so they register as well an aicraft movement.
+        #   For assigments of other units at t_init so they register as well an aicraft movement.
         self.problem.model.Add(
             self.problem.pattern_assigned_vars[1][t_init_idx][1] == 1
         )
@@ -71,11 +71,11 @@ class TestMovementDependency(ProblemTestSetup):
 
         status, solver = self.problem.solve()
 
-        amv = self.problem.aircraft_movement_vars
+        amv = self.problem.unit_movement_vars
         pmv = self.problem.movement_in_position_vars
         pav = self.problem.pattern_assigned_vars
 
-        # Aircraft1 is assigned to pattern 0 in t_init as it was fixed
+        # Unit1 is assigned to pattern 0 in t_init as it was fixed
         self.assertEqual(solver.Value(pav[0][t_init_idx][0]), 1)
 
         # The position movement position1 exist and therefore triggers a position movement in position2 and position3
@@ -84,15 +84,15 @@ class TestMovementDependency(ProblemTestSetup):
         self.assertEqual(solver.Value(pmv[2][t_init_idx]), 1)  # Triggered
         self.assertEqual(solver.Value(pmv[3][t_init_idx]), 1)  # To
 
-        # The aircraft1 movement is registered in t_init
-        self.assertEqual(solver.Value(amv[self.aircraft1.name][t_init_idx]), 1)
+        # The unit1 movement is registered in t_init
+        self.assertEqual(solver.Value(amv[self.unit1.name][t_init_idx]), 1)
 
-        # The aircraft1 movement is not registered in t_init + 1
-        self.assertEqual(solver.Value(amv[self.aircraft1.name][t_init_idx + 1]), 0)
+        # The unit1 movement is not registered in t_init + 1
+        self.assertEqual(solver.Value(amv[self.unit1.name][t_init_idx + 1]), 0)
 
-        # There are aircraft movements for aircraft 2 and 3 at t_init.
-        self.assertEqual(solver.Value(amv[self.aircraft2.name][t_init_idx]), 1)
-        self.assertEqual(solver.Value(amv[self.aircraft3.name][t_init_idx]), 1)
+        # There are unit movements for unit 2 and 3 at t_init.
+        self.assertEqual(solver.Value(amv[self.unit2.name][t_init_idx]), 1)
+        self.assertEqual(solver.Value(amv[self.unit3.name][t_init_idx]), 1)
 
     def test_dependant_movement_direction(self):
         """If A triggers a movement in B and B triggers a movement in C a movement from B to A
@@ -104,7 +104,7 @@ class TestMovementDependency(ProblemTestSetup):
         )
 
         t_init_idx = self.problem.date_to_index[self.t_init]
-        # Fixed assignments at t_init_idx for the three aircrafts and patterns (positions).
+        # Fixed assignments at t_init_idx for the three units and patterns (positions).
         self.problem.model.Add(
             self.problem.pattern_assigned_vars[0][t_init_idx][0] == 1
         )
@@ -122,28 +122,28 @@ class TestMovementDependency(ProblemTestSetup):
 
         status, solver = self.problem.solve()
 
-        amv = self.problem.aircraft_movement_vars
+        amv = self.problem.unit_movement_vars
         pmv = self.problem.movement_in_position_vars
         pav = self.problem.pattern_assigned_vars
 
-        # Aircraft1 is assigned to pattern 0 in t_init as it was fixed
+        # Unit1 is assigned to pattern 0 in t_init as it was fixed
         self.assertEqual(solver.Value(pav[0][t_init_idx][0]), 1)
 
-        # Aircraft2 is assigned to pattern 0 in t_init as it was fixed
+        # Unit2 is assigned to pattern 0 in t_init as it was fixed
         self.assertEqual(solver.Value(pav[1][t_init_idx + 1][0]), 1)
 
-        # The aircraft2 movement is registered in t_init and therefore aircraft1 as well to make room for it.
-        self.assertEqual(solver.Value(amv[self.aircraft1.name][t_init_idx]), 1)
-        self.assertEqual(solver.Value(amv[self.aircraft2.name][t_init_idx]), 1)
+        # The unit2 movement is registered in t_init and therefore unit1 as well to make room for it.
+        self.assertEqual(solver.Value(amv[self.unit1.name][t_init_idx]), 1)
+        self.assertEqual(solver.Value(amv[self.unit2.name][t_init_idx]), 1)
 
         # The position movement position1 exist and therefore triggers a position movement in position2 and position3
         self.assertEqual(solver.Value(pmv[0][0]), 1)
         self.assertEqual(solver.Value(pmv[1][0]), 1)
         self.assertEqual(solver.Value(pmv[2][0]), 1)
 
-        # # The aircraft1 movement is not registered in t_init + 1
-        self.assertEqual(solver.Value(amv[self.aircraft1.name][t_init_idx + 1]), 0)
+        # # The unit1 movement is not registered in t_init + 1
+        self.assertEqual(solver.Value(amv[self.unit1.name][t_init_idx + 1]), 0)
 
-        # # There are aircraft movements for aircraft 2 and none for aircraft3 at t_init.
-        self.assertEqual(solver.Value(amv[self.aircraft2.name][t_init_idx]), 1)
-        self.assertEqual(solver.Value(amv[self.aircraft3.name][t_init_idx]), 0)
+        # # There are unit movements for unit 2 and none for unit3 at t_init.
+        self.assertEqual(solver.Value(amv[self.unit2.name][t_init_idx]), 1)
+        self.assertEqual(solver.Value(amv[self.unit3.name][t_init_idx]), 0)

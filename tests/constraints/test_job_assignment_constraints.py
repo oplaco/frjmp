@@ -4,18 +4,18 @@ from datetime import date
 from ortools.sat.python import cp_model
 
 from frjmp.model.constraints.assignment import add_job_assignment_constraints
-from frjmp.model.parameters.position_aircraft_model import (
+from frjmp.model.parameters.position_unit_model import (
     Pattern,
-    PositionsAircraftModelDependency,
+    PositionsUnitTypeDependency,
 )
-from frjmp.model.sets.aircraft import Aircraft, AircraftModel
+from frjmp.model.sets.unit import Unit, UnitType
 from frjmp.model.sets.job import Job
 from frjmp.model.sets.need import Need
 from frjmp.model.sets.phase import Phase
 from frjmp.model.sets.position import Position
 from frjmp.model.variables.assignment import create_assignment_variables
 from frjmp.model.variables.movement import (
-    create_aircraft_movement_variables,
+    create_unit_movement_variables,
     create_movement_in_position_variables,
 )
 from frjmp.model.variables.pattern_assignment import create_pattern_assignment_variables
@@ -25,13 +25,13 @@ from frjmp.utils.validation_utils import validate_capacity_feasibility
 
 class TestJobAssignmentConstraints(unittest.TestCase):
     def setUp(self):
-        self.aircraft_model1 = AircraftModel("C295")
-        self.aircraft_model2 = AircraftModel("A400M")
-        self.aircraft_models = [self.aircraft_model1, self.aircraft_model2]
+        self.unit_model1 = UnitType("C295")
+        self.unit_model2 = UnitType("A400M")
+        self.unit_types = [self.unit_model1, self.unit_model2]
 
-        self.aircraft1 = Aircraft("AC1", self.aircraft_model1)
-        self.aircraft2 = Aircraft("AC2", self.aircraft_model2)
-        self.aircraft3 = Aircraft("AC3", self.aircraft_model2)
+        self.unit1 = Unit("AC1", self.unit_model1)
+        self.unit2 = Unit("AC2", self.unit_model2)
+        self.unit3 = Unit("AC3", self.unit_model2)
 
         self.need1 = Need("repair")
         self.need2 = Need("overhaul")
@@ -41,20 +41,12 @@ class TestJobAssignmentConstraints(unittest.TestCase):
         self.phase2 = Phase("overhaul-phase", self.need2)
         self.phase3 = Phase("fal", self.need3)
 
-        self.job1 = Job(
-            self.aircraft1, self.phase1, date(2025, 4, 10), date(2025, 4, 12)
-        )
-        self.job2 = Job(
-            self.aircraft1, self.phase1, date(2025, 4, 17), date(2025, 4, 20)
-        )
+        self.job1 = Job(self.unit1, self.phase1, date(2025, 4, 10), date(2025, 4, 12))
+        self.job2 = Job(self.unit1, self.phase1, date(2025, 4, 17), date(2025, 4, 20))
 
-        self.job3 = Job(
-            self.aircraft2, self.phase1, date(2025, 4, 21), date(2025, 4, 30)
-        )
+        self.job3 = Job(self.unit2, self.phase1, date(2025, 4, 21), date(2025, 4, 30))
 
-        self.job4 = Job(
-            self.aircraft3, self.phase1, date(2025, 4, 27), date(2025, 5, 5)
-        )
+        self.job4 = Job(self.unit3, self.phase1, date(2025, 4, 27), date(2025, 5, 5))
 
         self.jobs = [self.job1, self.job2, self.job3, self.job4]
 
@@ -87,7 +79,7 @@ class TestJobAssignmentConstraints(unittest.TestCase):
         validate_capacity_feasibility(
             self.jobs, self.positions, self.compressed_dates, self.date_to_index
         )
-        self.aircraft_movement_vars = create_aircraft_movement_variables(
+        self.unit_movement_vars = create_unit_movement_variables(
             self.model, self.jobs, self.time_step_indexes
         )
 
@@ -103,8 +95,8 @@ class TestJobAssignmentConstraints(unittest.TestCase):
             self.model, self.positions, self.time_step_indexes
         )
 
-        pos_aircraft_model_dependency = PositionsAircraftModelDependency(
-            self.aircraft_models, self.positions
+        pos_unit_model_dependency = PositionsUnitTypeDependency(
+            self.unit_types, self.positions
         )
 
         self.pattern_assigned_vars = create_pattern_assignment_variables(
@@ -112,7 +104,7 @@ class TestJobAssignmentConstraints(unittest.TestCase):
             self.jobs,
             self.compressed_dates,
             self.date_to_index,
-            pos_aircraft_model_dependency,
+            pos_unit_model_dependency,
             self.assigned_vars,
         )
 
@@ -125,17 +117,17 @@ class TestJobAssignmentConstraints(unittest.TestCase):
             self.positions,
             self.date_to_index,
             self.time_step_indexes,
-            pos_aircraft_model_dependency,
+            pos_unit_model_dependency,
         )
         # We intentionally skip capcity constraint and movement constraints as we only want to validate assignment-related conditions.
 
     def test_link_pattern_assigment(self):
         """Create a pattern containing three positions.
-        Force the assignment of one job with an aircraft model that contains that aircraft model to one position.
+        Force the assignment of one job with an unit model that contains that unit model to one position.
         Test if the constraint assign the job to the other two positions as well."""
 
         pattern = Pattern([self.pos1, self.pos2, self.pos3])
-        self.aircraft_model2.add_pattern(pattern)
+        self.unit_model2.add_pattern(pattern)
 
         self.create_local_problem()
 
@@ -157,11 +149,11 @@ class TestJobAssignmentConstraints(unittest.TestCase):
         """
 
         pattern = Pattern([self.pos1, self.pos2, self.pos3])
-        self.aircraft_model2.add_pattern(pattern)
+        self.unit_model2.add_pattern(pattern)
 
         self.create_local_problem()
 
-        j_idx = 2  # job3 uses aircraft_model_2
+        j_idx = 2  # job3 uses unit_model_2
         t_idx = self.date_to_index.get(self.job3.start)  # Starting date of job3
         k_idx = 0  # There is only one defined pattern
         self.model.Add(self.pattern_assigned_vars[j_idx][t_idx][k_idx] == 1)

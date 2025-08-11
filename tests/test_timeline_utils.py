@@ -5,20 +5,20 @@ from frjmp.utils.timeline_utils import compress_dates, trim_jobs_before_date_inp
 from frjmp.model.sets.job import Job
 from frjmp.model.sets.phase import Phase
 from frjmp.model.sets.need import Need
-from frjmp.model.sets.aircraft import Aircraft, AircraftModel
+from frjmp.model.sets.unit import Unit, UnitType
 
 
 class TestCompressDates(unittest.TestCase):
     def test_compression_pass(self):
         # Setup
-        model = AircraftModel("C295")
-        aircraft = Aircraft("185", model)
+        model = UnitType("C295")
+        unit = Unit("185", model)
         wp = Need("WP")
         phase1 = Phase("4Y", wp)
         phase2 = Phase("WP", wp)
 
-        job1 = Job(aircraft, phase1, date(2024, 12, 1), date(2028, 4, 18))
-        job2 = Job(aircraft, phase2, date(2025, 4, 16), date(2027, 7, 20))
+        job1 = Job(unit, phase1, date(2024, 12, 1), date(2028, 4, 18))
+        job2 = Job(unit, phase2, date(2025, 4, 16), date(2027, 7, 20))
 
         compressed, date_to_index, index_to_date = compress_dates([job1, job2])
 
@@ -34,18 +34,18 @@ class TestCompressDates(unittest.TestCase):
         )
 
     def test_trim_jobs_pass(self):
-        model = AircraftModel("C295")
-        aircraft = Aircraft("185", model)
+        model = UnitType("C295")
+        unit = Unit("185", model)
         wp = Need("WP")
         phase = Phase("4Y", wp)
 
         t0 = date(2025, 7, 1)
         # end < t0. Should be removed.
-        job1 = Job(aircraft, phase, date(2025, 1, 2), date(2025, 4, 18))
+        job1 = Job(unit, phase, date(2025, 1, 2), date(2025, 4, 18))
         # start < t0 < end. Start should be set to t0.
-        job2 = Job(aircraft, phase, date(2025, 4, 16), date(2025, 7, 20))
+        job2 = Job(unit, phase, date(2025, 4, 16), date(2025, 7, 20))
         # start > t0. Should be left unmodified.
-        job3 = Job(aircraft, phase, date(2025, 7, 16), date(2025, 7, 20))
+        job3 = Job(unit, phase, date(2025, 7, 16), date(2025, 7, 20))
 
         jobs = [job1, job2, job3]
         trim_jobs_before_date_inplace(jobs, t0)

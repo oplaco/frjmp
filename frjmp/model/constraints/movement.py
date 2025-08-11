@@ -10,7 +10,7 @@ def add_movement_detection_constraints(
     model: cp_model.CpModel,
     assigned_vars: Dict[int, Dict[int, Dict[int, cp_model.IntVar]]],
     pattern_assigned_vars,
-    aircraft_movement_vars: Dict[int, Dict[int, cp_model.IntVar]],
+    unit_movement_vars: Dict[int, Dict[int, cp_model.IntVar]],
     movement_in_position_vars: Dict[int, Dict[int, cp_model.IntVar]],
     jobs: list[Job],
     num_timesteps: int,
@@ -22,46 +22,46 @@ def add_movement_detection_constraints(
     Args:
         model: OR-Tools CP model
         assigned_vars: assignment variables [job][position][time]
-        aircraft_movement_vars: movement detection variables [job][time]
+        unit_movement_vars: movement detection variables [job][time]
         num_timesteps: number of time steps
         forced_movements: optional dict specifying forced movement times per job
     """
-    add_aircraft_movement_constraint(
-        model, pattern_assigned_vars, aircraft_movement_vars, jobs, num_timesteps
+    add_unit_movement_constraint(
+        model, pattern_assigned_vars, unit_movement_vars, jobs, num_timesteps
     )
 
     add_movement_dependency_constraints(
         model,
         movement_in_position_vars,
-        aircraft_movement_vars,
+        unit_movement_vars,
         pattern_assigned_vars,
         jobs,
         positions_configuration,
         num_timesteps,
     )
 
-    link_aircraft_movements_to_position_movements(
+    link_unit_movements_to_position_movements(
         model,
         assigned_vars,
         movement_in_position_vars,
-        aircraft_movement_vars,
+        unit_movement_vars,
         jobs,
     )
 
 
-def add_aircraft_movement_constraint(
+def add_unit_movement_constraint(
     model: cp_model.CpModel,
     pattern_assigned_vars: dict[int, dict[int, dict[int, cp_model.IntVar]]],
-    aircraft_movement_vars: dict[str, dict[int, cp_model.IntVar]],
+    unit_movement_vars: dict[str, dict[int, cp_model.IntVar]],
     jobs: list,
     num_timesteps: int,
 ):
     from collections import defaultdict
 
-    # group jobs by aircraft
+    # group jobs by unit
     ac_to_jobs = defaultdict(list)
     for j_idx, job in enumerate(jobs):
-        ac_to_jobs[job.aircraft.name].append(j_idx)
+        ac_to_jobs[job.unit.name].append(j_idx)
 
     for ac_name, job_idxs in ac_to_jobs.items():
         for t in range(num_timesteps - 1):
@@ -105,7 +105,7 @@ def add_aircraft_movement_constraint(
 
             # 4) movement[t] = OR(diffs)
             if diffs:
-                mov = aircraft_movement_vars[ac_name][t]
+                mov = unit_movement_vars[ac_name][t]
                 model.AddBoolOr(diffs).OnlyEnforceIf(mov)
                 # and keep its value in sync
                 model.AddMaxEquality(mov, diffs)
@@ -114,19 +114,19 @@ def add_aircraft_movement_constraint(
 def add_movement_dependency_constraints(
     model: cp_model.CpModel,
     movement_in_position_vars: Dict[int, Dict[int, cp_model.IntVar]],
-    aircraft_movement_vars: Dict[str, Dict[int, cp_model.IntVar]],
+    unit_movement_vars: Dict[str, Dict[int, cp_model.IntVar]],
     pattern_assigned_vars: Dict[int, Dict[int, Dict[int, cp_model.IntVar]]],
     jobs: List,
     positions_configuration,
     num_timesteps: int,
 ) -> None:
     """
-    When aircraft is movev from pattern k0 to pattern k1 every possition in k0 and k1
+    When unit is movev from pattern k0 to pattern k1 every possition in k0 and k1
     register a position movement. Then each position movement might trigger more position
     movements based on the dependency matrix dep_matrix[i][j][k]
 
-    For every aircraft and every timestep t → t+1:
-        * Detect the pattern k₀ the aircraft occupies at t
+    For every unit and every timestep t → t+1:
+        * Detect the pattern k₀ the unit occupies at t
         * Detect the pattern k₁ it occupies at t+1
         * Create a Boolean hop variable  hop_{k₀→k₁,t}
         * If that hop is active, then
@@ -173,18 +173,18 @@ def add_movement_dependency_constraints(
                 raise ValueError(f"Missing movement var for position {p} at t={t}")
             model.AddImplication(hop, pos_mov)
 
-    # Group job-indices by aircraft
+    # Group job-indices by unit
     jobs_by_ac = defaultdict(list)  # ac_name → list[j_idx]
     for j_idx, job in enumerate(jobs):
-        jobs_by_ac[job.aircraft.name].append(j_idx)
+        jobs_by_ac[job.unit.name].append(j_idx)
 
     # Build constraints
     for ac_name, job_idxs in jobs_by_ac.items():
-        ac_mov_dict = aircraft_movement_vars.get(ac_name, {})
+        ac_mov_dict = unit_movement_vars.get(ac_name, {})
 
-        # All jobs of this aircraft share the same AircraftModel
-        aircraft_model = jobs[job_idxs[0]].aircraft.model
-        allowed_patterns = aircraft_model.allowed_patterns  # list[Pattern]
+        # All jobs of this unit share the same UnitType
+        unit_model = jobs[job_idxs[0]].unit.model
+        allowed_patterns = unit_model.allowed_patterns  # list[Pattern]
 
         for t in range(num_timesteps - 1):  # Can not evaluate t+1
             ac_mov_t = ac_mov_dict[t]
@@ -200,7 +200,7 @@ def add_movement_dependency_constraints(
 
             if ac_name == "ALPHA" and t == 0:
                 pass
-            # Aircraft inactive in one slice?  Nothing to do
+            # Unit inactive in one slice?  Nothing to do
             if not pat_vars_t and not pat_vars_t1:
                 continue
 
@@ -278,32 +278,32 @@ def add_movement_dependency_constraints(
                         )
 
 
-def link_aircraft_movements_to_position_movements(
+def link_unit_movements_to_position_movements(
     model,
     assigned_vars,
     movement_in_position_vars,
-    aircraft_movement_vars,
+    unit_movement_vars,
     jobs,
 ):
     """
-    An aircraft movement at t (between t and t+1) between position p and p' must enforce a position movement
+    An unit movement at t (between t and t+1) between position p and p' must enforce a position movement
     at t in both p and p' (movement_in_position_vars[p][t] and movement_in_position_vars[p'][t]).
     We need to check  assigned_var[j][p'][t+1] so we know to which position it was assigned.
-    In the contrary, if there is a movement in postion p at time t. There is only an aircraft movement
-    if any of the jobs of that aircraft is assigned to that position according to assigned_var[j][p][t] (for all j).
+    In the contrary, if there is a movement in postion p at time t. There is only an unit movement
+    if any of the jobs of that unit is assigned to that position according to assigned_var[j][p][t] (for all j).
 
 
-    This links aircraft-level movement to the spatial footprint of position-level movement.
+    This links unit-level movement to the spatial footprint of position-level movement.
     """
 
-    # 1) Group job‐indices by aircraft name
-    aircraft_to_jobs: dict[str, list[int]] = defaultdict(list)
+    # 1) Group job‐indices by unit name
+    unit_to_jobs: dict[str, list[int]] = defaultdict(list)
     for j_idx, job in enumerate(jobs):
-        aircraft_to_jobs[job.aircraft.name].append(j_idx)
+        unit_to_jobs[job.unit.name].append(j_idx)
 
-    # 2) For each aircraft and each time‐slice t
-    for ac_name, job_idxs in aircraft_to_jobs.items():
-        for t, ac_mov in aircraft_movement_vars[ac_name].items():
+    # 2) For each unit and each time‐slice t
+    for ac_name, job_idxs in unit_to_jobs.items():
+        for t, ac_mov in unit_movement_vars[ac_name].items():
             # FORWARD: ac_mov + assignment to p at t or t+1 → movement in p at t
             for j in job_idxs:
                 for p, t_dict in assigned_vars.get(j, {}).items():

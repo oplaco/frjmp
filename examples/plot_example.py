@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 
 
 def plot_solution(problem, solver):
-    # 1. Prepare aircraft color mapping in your main code:
-    aircraft_names = sorted({job.aircraft.name for job in problem.jobs})
-    color_map = {name: plt.cm.tab10(i % 10) for i, name in enumerate(aircraft_names)}
+    # 1. Prepare unit color mapping in your main code:
+    unit_names = sorted({job.unit.name for job in problem.jobs})
+    color_map = {name: plt.cm.tab10(i % 10) for i, name in enumerate(unit_names)}
 
     # 2. Compute x_vals for both plots:
     use_real_dates = False
@@ -29,7 +29,7 @@ def plot_solution(problem, solver):
     )
 
     plot_cumulative_movements(
-        aircraft_movement_vars=problem.aircraft_movement_vars,
+        unit_movement_vars=problem.unit_movement_vars,
         solver=solver,
         ax=axs[1],
         x_vals=x_vals,
@@ -40,11 +40,11 @@ def plot_solution(problem, solver):
     # 5. Create a shared legend
     handles = [
         plt.Line2D([0], [0], color=color_map[name], lw=4, label=name)
-        for name in aircraft_names
+        for name in unit_names
     ]
     fig.legend(
         handles=handles,
-        title="Aircraft",
+        title="Unit",
         loc="upper right",
         ncol=5,
         fontsize="small",
@@ -52,4 +52,4 @@ def plot_solution(problem, solver):
     )
 
     plt.tight_layout()
-    plt.show(block=False)
+    plt.show(block=True)

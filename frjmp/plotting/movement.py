@@ -4,7 +4,7 @@ from matplotlib.ticker import MaxNLocator
 
 
 def plot_cumulative_movements(
-    aircraft_movement_vars,
+    unit_movement_vars,
     solver,
     ax,
     x_vals: List,
@@ -12,18 +12,18 @@ def plot_cumulative_movements(
     use_real_dates: bool = False,
 ):
     """
-    Plots the cumulative number of movements per aircraft over time using step lines.
+    Plots the cumulative number of movements per unit over time using step lines.
 
-    Each aircraft is shown as a separate line, increasing its cumulative movement count
+    Each unit is shown as a separate line, increasing its cumulative movement count
     whenever a movement is detected at a given time step.
 
     Args:
-        aircraft_movement_vars: Dict[aircraft_name][t_idx] -> BoolVar indicating movement.
+        unit_movement_vars: Dict[unit_name][t_idx] -> BoolVar indicating movement.
         solver: OR-Tools solver with values assigned after solving.
         ax: Matplotlib Axes object to draw the plot on.
         x_vals: List of time step values (either compressed indices or real dates),
                 aligned with solver time dimension.
-        color_map: Dict mapping aircraft names to consistent plot colors.
+        color_map: Dict mapping unit names to consistent plot colors.
         use_real_dates: Whether to label the X-axis using real dates.
 
     Returns:
@@ -37,11 +37,11 @@ def plot_cumulative_movements(
     time_indices = [t for t, _ in enumerate(x_vals)]
     max_total = 0
 
-    for aircraft_name in sorted(aircraft_movement_vars.keys()):
+    for unit_name in sorted(unit_movement_vars.keys()):
         cumulative = []
         total = 0
         for t in time_indices:
-            var = aircraft_movement_vars[aircraft_name].get(t)
+            var = unit_movement_vars[unit_name].get(t)
             if var is not None:
                 total += solver.Value(var)
             cumulative.append(total)
@@ -50,13 +50,13 @@ def plot_cumulative_movements(
         ax.step(
             x_vals,
             cumulative,
-            label=aircraft_name,
+            label=unit_name,
             linewidth=2,
-            color=color_map.get(aircraft_name, "black"),
+            color=color_map.get(unit_name, "black"),
             where="post",
         )
 
-    ax.set_title("Cumulative Movements per Aircraft Over Time")
+    ax.set_title("Cumulative Movements per Unit Over Time")
     ax.set_ylabel("Cumulative Movements")
     ax.set_yticks(list(range(0, max_total + 2)))
     ax.set_xlabel("Date" if use_real_dates else "Time Step")
@@ -68,7 +68,7 @@ def plot_cumulative_movements(
     # ]
     # ax.legend(
     #     handles=handles,
-    #     title="Aircraft",
+    #     title="Unit",
     #     loc="upper right",
     #     ncol=4,
     # )

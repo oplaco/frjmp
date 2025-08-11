@@ -8,7 +8,7 @@ def plot_assignment_gantt(
     Creates a Gantt-like chart showing job assignments over time, grouped by position.
 
     Each bar represents a time block during which a job is assigned to a specific position.
-    Bars are colored per aircraft to maintain consistency, and aircraft labels are shown inside the bars.
+    Bars are colored per unit to maintain consistency, and unit labels are shown inside the bars.
 
     Args:
         assigned_vars: Dict[int][int][int] -> BoolVar indicating if job j is assigned to position p at time step t.
@@ -17,7 +17,7 @@ def plot_assignment_gantt(
         jobs: List of Job objects to be scheduled.
         ax: Matplotlib Axes object to draw the plot on.
         x_vals: List of time step values (either compressed indices or real dates), matching solver time steps.
-        color_map: Dict mapping aircraft names to consistent plot colors.
+        color_map: Dict mapping unit names to consistent plot colors.
         use_real_dates: Whether the X-axis should use actual date values instead of time step indices.
 
     Returns:
@@ -40,7 +40,7 @@ def plot_assignment_gantt(
         for j_idx, job in enumerate(jobs):
             if p_idx not in assigned_vars.get(j_idx, {}):
                 continue
-            aircraft_name = job.aircraft.name
+            unit_name = job.unit.name
             active_blocks = []
             for t_idx, var in assigned_vars[j_idx][p_idx].items():
                 if solver.Value(var):
@@ -61,7 +61,7 @@ def plot_assignment_gantt(
                             width,
                             left=bar_left,
                             height=0.8,
-                            color=color_map[aircraft_name],
+                            color=color_map[unit_name],
                             edgecolor="black",
                         )
                         # Place label at midpoint
@@ -86,7 +86,7 @@ def plot_assignment_gantt(
 
     ax.set_yticks(y_ticks)
     ax.set_yticklabels(y_labels)
-    ax.set_title("Aircraft Positioning Gantt Chart")
+    ax.set_title("Unit Positioning Gantt Chart")
 
     # # Add legend based on color map
     # handles = [
@@ -95,7 +95,7 @@ def plot_assignment_gantt(
     # ]
     # ax.legend(
     #     handles=handles,
-    #     title="Aircraft",
+    #     title="Unit",
     #     loc="upper right",
     #     ncol=4,
     # )

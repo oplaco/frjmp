@@ -5,17 +5,17 @@ from ortools.sat.python import cp_model
 
 from frjmp.model.constraints.assignment import add_job_assignment_constraints
 from frjmp.model.constraints.capacity import add_position_capacity_constraints
-from frjmp.model.parameters.position_aircraft_model import (
-    PositionsAircraftModelDependency,
+from frjmp.model.parameters.position_unit_model import (
+    PositionsUnitTypeDependency,
 )
-from frjmp.model.sets.aircraft import Aircraft, AircraftModel
+from frjmp.model.sets.unit import Unit, UnitType
 from frjmp.model.sets.job import Job
 from frjmp.model.sets.need import Need
 from frjmp.model.sets.phase import Phase
 from frjmp.model.sets.position import Position
 from frjmp.model.variables.assignment import create_assignment_variables
 from frjmp.model.variables.movement import (
-    create_aircraft_movement_variables,
+    create_unit_movement_variables,
     create_movement_in_position_variables,
 )
 from frjmp.model.variables.pattern_assignment import create_pattern_assignment_variables
@@ -24,19 +24,15 @@ from frjmp.utils.timeline_utils import compress_dates
 
 class TestMovementConstraint(unittest.TestCase):
     def setUp(self):
-        self.aircraft_model1 = AircraftModel("C295")
-        self.aircraft_models = [self.aircraft_model1]
-        self.aircraft1 = Aircraft("AC1", self.aircraft_model1)
-        self.aircraft2 = Aircraft("AC2", self.aircraft_model1)
+        self.unit_model1 = UnitType("C295")
+        self.unit_types = [self.unit_model1]
+        self.unit1 = Unit("AC1", self.unit_model1)
+        self.unit2 = Unit("AC2", self.unit_model1)
         self.need = Need("repair")
         self.phase = Phase("repair-phase", self.need)
 
-        self.job1 = Job(
-            self.aircraft1, self.phase, date(2025, 4, 10), date(2025, 4, 15)
-        )
-        self.job2 = Job(
-            self.aircraft2, self.phase, date(2025, 4, 10), date(2025, 4, 15)
-        )
+        self.job1 = Job(self.unit1, self.phase, date(2025, 4, 10), date(2025, 4, 15))
+        self.job2 = Job(self.unit2, self.phase, date(2025, 4, 10), date(2025, 4, 15))
         self.jobs = [self.job1, self.job2]
 
         self.pos1 = Position("Hangar A", [self.need], capacity=1)
@@ -54,7 +50,7 @@ class TestMovementConstraint(unittest.TestCase):
     def create_local_problem(self):
         """Create the optimization problem resembling the frjmp.project.Problem object but with ONLY the necessary constraints and variables."""
         self.model = cp_model.CpModel()
-        self.aircraft_movement_vars = create_aircraft_movement_variables(
+        self.unit_movement_vars = create_unit_movement_variables(
             self.model, self.jobs, self.time_step_indexes
         )
 
@@ -70,8 +66,8 @@ class TestMovementConstraint(unittest.TestCase):
             self.model, self.positions, self.time_step_indexes
         )
 
-        pos_aircraft_model_dependency = PositionsAircraftModelDependency(
-            self.aircraft_models, self.positions
+        pos_unit_model_dependency = PositionsUnitTypeDependency(
+            self.unit_types, self.positions
         )
 
         self.pattern_assigned_vars = create_pattern_assignment_variables(
@@ -79,7 +75,7 @@ class TestMovementConstraint(unittest.TestCase):
             self.jobs,
             self.compressed_dates,
             self.date_to_index,
-            pos_aircraft_model_dependency,
+            pos_unit_model_dependency,
             self.assigned_vars,
         )
 
@@ -92,7 +88,7 @@ class TestMovementConstraint(unittest.TestCase):
             self.positions,
             self.date_to_index,
             self.time_step_indexes,
-            pos_aircraft_model_dependency,
+            pos_unit_model_dependency,
         )
 
         # Add capacity constraint that needs assigment constraint to make sense.

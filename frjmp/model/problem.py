@@ -4,7 +4,7 @@ from datetime import date, timedelta
 from ortools.sat.python import cp_model
 from frjmp.model.variables.assignment import create_assignment_variables
 from frjmp.model.variables.movement import (
-    create_aircraft_movement_variables,
+    create_unit_movement_variables,
     create_movement_in_position_variables,
 )
 from frjmp.model.variables.pattern_assignment import create_pattern_assignment_variables
@@ -12,14 +12,14 @@ from frjmp.model.constraints.assignment import add_job_assignment_constraints
 from frjmp.model.constraints.capacity import add_position_capacity_constraints
 from frjmp.model.constraints.movement import add_movement_detection_constraints
 from frjmp.model.objective_function import (
-    minimize_total_aircraft_movements,
+    minimize_total_unit_movements,
     minimize_total_position_movements,
 )
 from frjmp.model.parameters.positions_configuration import PositionsConfiguration
-from frjmp.model.parameters.position_aircraft_model import (
-    PositionsAircraftModelDependency,
+from frjmp.model.parameters.position_unit_model import (
+    PositionsUnitTypeDependency,
 )
-from frjmp.model.sets.aircraft import AircraftModel
+from frjmp.model.sets.unit import UnitType
 from frjmp.model.sets.job import Job
 from frjmp.model.sets.position import Position
 from frjmp.utils.timeline_utils import (
@@ -29,7 +29,7 @@ from frjmp.utils.timeline_utils import (
 )
 from frjmp.utils.validation_utils import (
     validate_capacity_feasibility,
-    validate_non_overlapping_jobs_per_aircraft,
+    validate_non_overlapping_jobs_per_unit,
 )
 from frjmp.model.logger import IncrementalSolverLogger
 
@@ -44,7 +44,7 @@ class Problem:
         self,
         jobs: list[Job],
         positions_configuration: PositionsConfiguration,
-        position_aircraftmodel_dependency: PositionsAircraftModelDependency,
+        position_unittype_dependency: PositionsUnitTypeDependency,
         t_init: date = date.today(),
         t_last: date = None,
         initial_conditions: dict = None,
@@ -55,8 +55,8 @@ class Problem:
         self.positions = positions_configuration.positions
         self.t_init = t_init
         self.t0 = t_init - timedelta(days=1)
-        self.pos_aircraft_model_dependency = position_aircraftmodel_dependency
-        self.aircraft_models = position_aircraftmodel_dependency.aircraft_models
+        self.pos_unit_model_dependency = position_unittype_dependency
+        self.unit_types = position_unittype_dependency.unit_types
         if t_last is None:
             self.t_last = self.t0 + timedelta(days=365)
         elif t_last <= self.t0:
@@ -90,7 +90,7 @@ class Problem:
         self.time_step_indexes = compressed_dates
 
         # --- Validations --- #
-        validate_non_overlapping_jobs_per_aircraft(jobs)
+        validate_non_overlapping_jobs_per_unit(jobs)
         validate_capacity_feasibility(
             jobs, self.positions, compressed_dates, date_to_index
         )
@@ -109,7 +109,7 @@ class Problem:
             self.compressed_dates,
             self.date_to_index,
         )
-        self.aircraft_movement_vars = create_aircraft_movement_variables(
+        self.unit_movement_vars = create_unit_movement_variables(
             self.model, self.jobs, self.time_step_indexes
         )
         self.movement_in_position_vars = create_movement_in_position_variables(
@@ -121,7 +121,7 @@ class Problem:
             self.jobs,
             self.compressed_dates,
             self.date_to_index,
-            self.pos_aircraft_model_dependency,
+            self.pos_unit_model_dependency,
             self.assigned_vars,
         )
 
@@ -141,14 +141,14 @@ class Problem:
             self.positions,
             self.date_to_index,
             self.time_step_indexes,
-            self.pos_aircraft_model_dependency,
+            self.pos_unit_model_dependency,
         )
 
         add_movement_detection_constraints(
             self.model,
             self.assigned_vars,
             self.pattern_assigned_vars,
-            self.aircraft_movement_vars,
+            self.unit_movement_vars,
             self.movement_in_position_vars,
             self.jobs,
             num_timesteps=len(self.time_step_indexes),
@@ -164,8 +164,8 @@ class Problem:
         )
 
     def set_objective(self):
-        total_movements = minimize_total_aircraft_movements(
-            self.model, self.aircraft_movement_vars
+        total_movements = minimize_total_unit_movements(
+            self.model, self.unit_movement_vars
         )
 
         # total_movements = minimize_total_position_movements(
@@ -193,12 +193,12 @@ class Problem:
         self.fixed_variables.append((var, value))
         return var
 
-    def add_fixed_aircraft_movement(self, aircraft_name, t_idx, value=True):
+    def add_fixed_unit_movement(self, unit_name, t_idx, value=True):
         try:
-            var = self.aircraft_movement_vars[aircraft_name][t_idx]
+            var = self.unit_movement_vars[unit_name][t_idx]
         except KeyError:
             raise ValueError(
-                f"Invalid fixed movement: variable for aircraft '{aircraft_name}' at time {t_idx} does not exist."
+                f"Invalid fixed movement: variable for unit '{unit_name}' at time {t_idx} does not exist."
             )
         self.fixed_variables.append((var, value))
         return var
@@ -211,29 +211,27 @@ class Problem:
         """Apply to the initial conditions (at t0) of movements and assigments.
 
         Raises:
-            ValueError: If there is not an active job for a given aircraft in t0.
-            ValueError: If the pattern assigned to a job is not valid for a given aircraft.
+            ValueError: If there is not an active job for a given unit in t0.
+            ValueError: If the pattern assigned to a job is not valid for a given unit.
         """
         t_init_idx = self.date_to_index[self.t0]
         pos_index = {p.name: idx for idx, p in enumerate(self.positions)}
-        model_index = {model: idx for idx, model in enumerate(self.aircraft_models)}
-        pattern_matrix = self.pos_aircraft_model_dependency.generate_matrix()
+        model_index = {model: idx for idx, model in enumerate(self.unit_types)}
+        pattern_matrix = self.pos_unit_model_dependency.generate_matrix()
 
-        for aircraft, assigned_positions in self.initial_conditions[
-            "assignments"
-        ].items():
+        for unit, assigned_positions in self.initial_conditions["assignments"].items():
             assigned_pos_names = {pos.name for pos in assigned_positions}
-            model = aircraft.model
+            model = unit.model
             model_idx = model_index[model]
 
             # Find matching job
             job_idx = None
             for j_idx, job in enumerate(self.jobs):
-                if job.aircraft == aircraft and job.start <= self.t_init <= job.end:
+                if job.unit == unit and job.start <= self.t_init <= job.end:
                     job_idx = j_idx
                     break
             if job_idx is None:
-                raise ValueError(f"No active job found for {aircraft.name} at t0.")
+                raise ValueError(f"No active job found for {unit.name} at t0.")
 
             # Try to match pattern k_idx in model.allowed_patterns
             matched = False
@@ -252,7 +250,7 @@ class Problem:
 
             if not matched:
                 raise ValueError(
-                    f"No matching pattern found for aircraft {aircraft.name} with positions {assigned_pos_names}."
+                    f"No matching pattern found for unit {unit.name} with positions {assigned_pos_names}."
                 )
 
     def solve(self):

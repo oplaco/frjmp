@@ -7,21 +7,21 @@ from frjmp.model.constraints.assignment import add_job_assignment_constraints
 from frjmp.model.constraints.capacity import add_position_capacity_constraints
 from frjmp.model.constraints.movement import (
     add_movement_dependency_constraints,
-    add_aircraft_movement_constraint,
-    link_aircraft_movements_to_position_movements,
+    add_unit_movement_constraint,
+    link_unit_movements_to_position_movements,
 )
 from frjmp.model.parameters.positions_configuration import PositionsConfiguration
-from frjmp.model.parameters.position_aircraft_model import (
-    PositionsAircraftModelDependency,
+from frjmp.model.parameters.position_unit_model import (
+    PositionsUnitTypeDependency,
 )
-from frjmp.model.sets.aircraft import Aircraft, AircraftModel
+from frjmp.model.sets.unit import Unit, UnitType
 from frjmp.model.sets.job import Job
 from frjmp.model.sets.need import Need
 from frjmp.model.sets.phase import Phase
 from frjmp.model.sets.position import Position
 from frjmp.model.variables.assignment import create_assignment_variables
 from frjmp.model.variables.movement import (
-    create_aircraft_movement_variables,
+    create_unit_movement_variables,
     create_movement_in_position_variables,
 )
 from frjmp.model.variables.pattern_assignment import create_pattern_assignment_variables
@@ -30,10 +30,10 @@ from frjmp.utils.timeline_utils import compress_dates
 
 class TestMovementConstraint(unittest.TestCase):
     def setUp(self):
-        self.aircraft_model1 = AircraftModel("C295")
-        self.aircraft_models = [self.aircraft_model1]
-        self.aircraft = Aircraft("AC1", self.aircraft_model1)
-        self.aircraft2 = Aircraft("AC2", self.aircraft_model1)
+        self.unit_model1 = UnitType("C295")
+        self.unit_types = [self.unit_model1]
+        self.unit = Unit("AC1", self.unit_model1)
+        self.unit2 = Unit("AC2", self.unit_model1)
         self.need = Need("repair")
         self.phase1 = Phase("repair-phase-1", self.need)
         self.phase2 = Phase("repair-phase-2", self.need)
@@ -55,7 +55,7 @@ class TestMovementConstraint(unittest.TestCase):
 
         self.model = cp_model.CpModel()
 
-        self.aircraft_movement_vars = create_aircraft_movement_variables(
+        self.unit_movement_vars = create_unit_movement_variables(
             self.model, self.jobs, self.time_step_indexes
         )
 
@@ -71,8 +71,8 @@ class TestMovementConstraint(unittest.TestCase):
             self.model, self.positions, self.time_step_indexes
         )
 
-        pos_aircraft_model_dependency = PositionsAircraftModelDependency(
-            self.aircraft_models, self.positions
+        pos_unit_model_dependency = PositionsUnitTypeDependency(
+            self.unit_types, self.positions
         )
 
         self.pattern_assigned_vars = create_pattern_assignment_variables(
@@ -80,7 +80,7 @@ class TestMovementConstraint(unittest.TestCase):
             self.jobs,
             self.compressed_dates,
             self.date_to_index,
-            pos_aircraft_model_dependency,
+            pos_unit_model_dependency,
             self.assigned_vars,
         )
 
@@ -93,7 +93,7 @@ class TestMovementConstraint(unittest.TestCase):
             self.positions,
             self.date_to_index,
             self.time_step_indexes,
-            pos_aircraft_model_dependency,
+            pos_unit_model_dependency,
         )
 
         add_position_capacity_constraints(
@@ -104,28 +104,28 @@ class TestMovementConstraint(unittest.TestCase):
             num_timesteps=len(self.time_step_indexes),
         )
 
-        add_aircraft_movement_constraint(
+        add_unit_movement_constraint(
             self.model,
             self.pattern_assigned_vars,
-            self.aircraft_movement_vars,
+            self.unit_movement_vars,
             self.jobs,
             num_timesteps=len(self.time_step_indexes),
         )
-        link_aircraft_movements_to_position_movements(
+        link_unit_movements_to_position_movements(
             self.model,
             self.assigned_vars,
             self.movement_in_position_vars,
-            self.aircraft_movement_vars,
+            self.unit_movement_vars,
             self.jobs,
         )
-        pos_aircraft_model_dependency = PositionsConfiguration(positions=self.positions)
+        pos_unit_model_dependency = PositionsConfiguration(positions=self.positions)
         add_movement_dependency_constraints(
             self.model,
             self.movement_in_position_vars,
-            self.aircraft_movement_vars,
+            self.unit_movement_vars,
             self.pattern_assigned_vars,
             self.jobs,
-            pos_aircraft_model_dependency,
+            pos_unit_model_dependency,
             num_timesteps=len(self.time_step_indexes),
         )
 
@@ -138,19 +138,13 @@ class TestMovementConstraint(unittest.TestCase):
         self.model.Minimize(total_movements)
 
     def test_movement_detected_when_pattern_changes_same_job(self):
-        self.job1 = Job(
-            self.aircraft, self.phase1, date(2025, 4, 10), date(2025, 4, 15)
-        )
-        self.job3 = Job(
-            self.aircraft2, self.phase2, date(2025, 4, 13), date(2025, 4, 15)
-        )
-        self.job2 = Job(
-            self.aircraft2, self.phase2, date(2025, 4, 16), date(2025, 4, 20)
-        )
+        self.job1 = Job(self.unit, self.phase1, date(2025, 4, 10), date(2025, 4, 15))
+        self.job3 = Job(self.unit2, self.phase2, date(2025, 4, 13), date(2025, 4, 15))
+        self.job2 = Job(self.unit2, self.phase2, date(2025, 4, 16), date(2025, 4, 20))
         self.jobs = [self.job1, self.job2, self.job3]
         self.create_local_problem()
         # To isolate the movement constraint. Fake the other crucial constraint, the assigment constraint by setting some values.
-        # Move assign aircraft 0 to pos1 in t0 and in pos2 in t1 and t2.
+        # Move assign unit 0 to pos1 in t0 and in pos2 in t1 and t2.
         pattern0 = 0
         pattern1 = 1
         self.model.Add(self.pattern_assigned_vars[0][0][pattern0] == 1)  # t0
@@ -162,28 +156,18 @@ class TestMovementConstraint(unittest.TestCase):
         solver = cp_model.CpSolver()
         status = solver.Solve(self.model)
 
-        # Aircraft movement.
+        # Unit movement.
         self.assertEqual(status, cp_model.OPTIMAL)
         # Movement at t0
-        self.assertEqual(
-            solver.Value(self.aircraft_movement_vars[self.aircraft.name][0]), 1
-        )
+        self.assertEqual(solver.Value(self.unit_movement_vars[self.unit.name][0]), 1)
         # No movements at t1
-        self.assertEqual(
-            solver.Value(self.aircraft_movement_vars[self.aircraft.name][1]), 0
-        )
-        # Last time step for this aircraft is considered a movement because there are no more jobs
-        self.assertEqual(
-            solver.Value(self.aircraft_movement_vars[self.aircraft.name][2]), 1
-        )
+        self.assertEqual(solver.Value(self.unit_movement_vars[self.unit.name][1]), 0)
+        # Last time step for this unit is considered a movement because there are no more jobs
+        self.assertEqual(solver.Value(self.unit_movement_vars[self.unit.name][2]), 1)
 
-    def test_movement_detected_when_pattern_changes_different_job_same_aircraft(self):
-        self.job1 = Job(
-            self.aircraft, self.phase1, date(2025, 4, 10), date(2025, 4, 15)
-        )
-        self.job2 = Job(
-            self.aircraft, self.phase2, date(2025, 4, 16), date(2025, 4, 20)
-        )
+    def test_movement_detected_when_pattern_changes_different_job_same_unit(self):
+        self.job1 = Job(self.unit, self.phase1, date(2025, 4, 10), date(2025, 4, 15))
+        self.job2 = Job(self.unit, self.phase2, date(2025, 4, 16), date(2025, 4, 20))
         self.jobs = [self.job1, self.job2]
 
         self.create_local_problem()
@@ -213,38 +197,32 @@ class TestMovementConstraint(unittest.TestCase):
         status = solver.Solve(self.model)
 
         self.assertEqual(status, cp_model.OPTIMAL)
-        # job j=0 and j=1 belong to the same aircraft
-        self.assertEqual(self.jobs[0].aircraft.name, self.jobs[1].aircraft.name)
+        # job j=0 and j=1 belong to the same unit
+        self.assertEqual(self.jobs[0].unit.name, self.jobs[1].unit.name)
         # Should detect movement at t1
-        self.assertEqual(
-            solver.Value(self.aircraft_movement_vars[self.aircraft.name][1]), 1
-        )
+        self.assertEqual(solver.Value(self.unit_movement_vars[self.unit.name][1]), 1)
         # No movement at t0,t2 and t3
         for t in [0, 2, 3]:
             self.assertEqual(
-                solver.Value(self.aircraft_movement_vars[self.aircraft.name][t]), 0
+                solver.Value(self.unit_movement_vars[self.unit.name][t]), 0
             )
 
-    def test_link_between_aircraft_movement_and_position_movement_direct(self):
-        """An aircraft movement between t and t+1 (i.e at t) between position p and p' must enforce
+    def test_link_between_unit_movement_and_position_movement_direct(self):
+        """An unit movement between t and t+1 (i.e at t) between position p and p' must enforce
         a position movement at t in both p and p'.
         """
-        self.job1 = Job(
-            self.aircraft, self.phase1, date(2025, 4, 10), date(2025, 4, 15)
-        )
-        self.job2 = Job(
-            self.aircraft, self.phase2, date(2025, 4, 16), date(2025, 4, 20)
-        )
+        self.job1 = Job(self.unit, self.phase1, date(2025, 4, 10), date(2025, 4, 15))
+        self.job2 = Job(self.unit, self.phase2, date(2025, 4, 16), date(2025, 4, 20))
         self.jobs = [self.job1, self.job2]
 
         self.create_local_problem()
 
         # Create movement from pattern 0 (Hangar A) to pattern 1 (Hangar B) between t and t+1
         t_idx = 0
-        aircraft_name = self.aircraft.name
+        unit_name = self.unit.name
         pp_idx = 0  # previous position index
         np_idx = 1  # next position index
-        self.model.Add(self.aircraft_movement_vars[aircraft_name][t_idx] == 1)
+        self.model.Add(self.unit_movement_vars[unit_name][t_idx] == 1)
         self.model.Add(self.pattern_assigned_vars[0][t_idx][0] == 1)
         self.model.Add(self.pattern_assigned_vars[0][t_idx + 1][1] == 1)
 
@@ -256,30 +234,26 @@ class TestMovementConstraint(unittest.TestCase):
         self.assertEqual(solver.Value(self.movement_in_position_vars[pp_idx][0]), 1)
         self.assertEqual(solver.Value(self.movement_in_position_vars[np_idx][0]), 1)
 
-        # There is no position movement at the target position at t1 as the aircraft is assigned.
+        # There is no position movement at the target position at t1 as the unit is assigned.
         self.assertEqual(solver.Value(self.movement_in_position_vars[np_idx][1]), 0)
 
-    def test_link_between_aircraft_movement_and_position_movement_reverse(self):
-        """On the contrary, if there is a movement in postion p at time t. There is only an aircraft movement
-        if any of the jobs of that aircraft is assigned to that position according to assigned_var[j][p][t] (for all j).
+    def test_link_between_unit_movement_and_position_movement_reverse(self):
+        """On the contrary, if there is a movement in postion p at time t. There is only an unit movement
+        if any of the jobs of that unit is assigned to that position according to assigned_var[j][p][t] (for all j).
         """
-        self.job1 = Job(
-            self.aircraft, self.phase1, date(2025, 4, 10), date(2025, 4, 15)
-        )
-        self.job2 = Job(
-            self.aircraft, self.phase2, date(2025, 4, 16), date(2025, 4, 20)
-        )
+        self.job1 = Job(self.unit, self.phase1, date(2025, 4, 10), date(2025, 4, 15))
+        self.job2 = Job(self.unit, self.phase2, date(2025, 4, 16), date(2025, 4, 20))
         self.jobs = [self.job1, self.job2]
 
         self.create_local_problem()
 
         # Create position movement assigment and pattern assignments.
         t0_idx = 0
-        aircraft_name = self.aircraft.name
+        unit_name = self.unit.name
         source_pattern_idx = 0
         target_pattern_idx = 1
-        source_pattern = self.aircraft.model.allowed_patterns[source_pattern_idx]
-        target_pattern = self.aircraft.model.allowed_patterns[target_pattern_idx]
+        source_pattern = self.unit.model.allowed_patterns[source_pattern_idx]
+        target_pattern = self.unit.model.allowed_patterns[target_pattern_idx]
 
         self.model.Add(self.pattern_assigned_vars[0][t0_idx][source_pattern_idx] == 1)
         for pos in source_pattern.positions + target_pattern.positions:
@@ -290,7 +264,5 @@ class TestMovementConstraint(unittest.TestCase):
         status = solver.Solve(self.model)
 
         self.assertEqual(status, cp_model.OPTIMAL)
-        # There is an aircraft movement at t0 as there are two positions movements at t0 and one aircraft is assigned to one of those positions.
-        self.assertEqual(
-            solver.Value(self.aircraft_movement_vars[aircraft_name][t0_idx]), 1
-        )
+        # There is an unit movement at t0 as there are two positions movements at t0 and one unit is assigned to one of those positions.
+        self.assertEqual(solver.Value(self.unit_movement_vars[unit_name][t0_idx]), 1)

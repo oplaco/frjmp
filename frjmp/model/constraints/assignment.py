@@ -3,8 +3,8 @@ from ortools.sat.python import cp_model
 
 from frjmp.model.sets.job import Job
 from frjmp.model.sets.position import Position
-from frjmp.model.parameters.position_aircraft_model import (
-    PositionsAircraftModelDependency,
+from frjmp.model.parameters.position_unit_model import (
+    PositionsUnitTypeDependency,
 )
 
 
@@ -16,7 +16,7 @@ def add_job_assignment_constraints(
     positions: list[Position],
     date_to_index: dict[date, int],
     compressed_dates: list[date],
-    dependency: PositionsAircraftModelDependency,
+    dependency: PositionsUnitTypeDependency,
 ):
     """
     Link pattern assignment variables to position assignment variables.
@@ -27,11 +27,11 @@ def add_job_assignment_constraints(
         not cover the job phase need.
     """
     matrix = dependency.generate_matrix()
-    aircraft_models = dependency.aircraft_models
-    model_to_index = {model: idx for idx, model in enumerate(aircraft_models)}
+    unit_types = dependency.unit_types
+    model_to_index = {model: idx for idx, model in enumerate(unit_types)}
 
     for j_idx, job in enumerate(jobs):
-        model_idx = model_to_index[job.aircraft.model]
+        model_idx = model_to_index[job.unit.model]
         n_patterns = len(matrix[model_idx])
         for t_date in compressed_dates:
             if not (job.start <= t_date <= job.end):
@@ -49,7 +49,7 @@ def add_job_assignment_constraints(
                 if a_var is None:
                     # For the moment I dont think it makes sense to raise and error. If a job cant be done in a position because the latter
                     # does not cover it needs, the variable wont be created (to save memory and time). If this position cant host the job we
-                    # cant expect either the pattern to be able to do so. Since patterns are related to aircrafts and needs to jobs we cant
+                    # cant expect either the pattern to be able to do so. Since patterns are related to units and needs to jobs we cant
                     # directly not create pattern_assigment_vars as well as assigment_vars.
                     continue
                     # raise ValueError(

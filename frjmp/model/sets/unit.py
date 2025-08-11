@@ -1,8 +1,8 @@
-from frjmp.model.parameters.position_aircraft_model import Pattern
+from frjmp.model.parameters.position_unit_model import Pattern
 from frjmp.model.sets.position import Position
 
 
-class AircraftModel:
+class UnitType:
     def __init__(self, name: str):
         self.name = name
         self.allowed_patterns: list[Pattern] = []
@@ -25,8 +25,8 @@ class AircraftModel:
         return self.name
 
 
-class Aircraft:
-    def __init__(self, name: str, model: AircraftModel):
+class Unit:
+    def __init__(self, name: str, model: UnitType):
         self.name = name
         self.model = model
 

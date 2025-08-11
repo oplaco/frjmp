@@ -74,25 +74,25 @@ def validate_capacity_feasibility(
     return summary
 
 
-def validate_non_overlapping_jobs_per_aircraft(jobs: List[Job]):
+def validate_non_overlapping_jobs_per_unit(jobs: List[Job]):
     """
-    Validates that no aircraft has overlapping jobs in time (inclusive).
+    Validates that no unit has overlapping jobs in time (inclusive).
 
     Raises:
-        ValueError: If any aircraft has two jobs that overlap.
+        ValueError: If any unit has two jobs that overlap.
     """
-    aircraft_jobs = defaultdict(list)
+    unit_jobs = defaultdict(list)
 
     for job in jobs:
-        aircraft_jobs[job.aircraft.name].append(job)
+        unit_jobs[job.unit.name].append(job)
 
-    for aircraft_name, job_list in aircraft_jobs.items():
+    for unit_name, job_list in unit_jobs.items():
         sorted_jobs = sorted(job_list, key=lambda j: j.start)
         for i in range(1, len(sorted_jobs)):
             prev = sorted_jobs[i - 1]
             curr = sorted_jobs[i]
             if curr.start <= prev.end:
                 raise ValueError(
-                    f"Aircraft '{aircraft_name}' has overlapping jobs: "
+                    f"Unit '{unit_name}' has overlapping jobs: "
                     f"{prev.start}–{prev.end} and {curr.start}–{curr.end}"
                 )

@@ -28,7 +28,7 @@ def create_assignment_variables(
         ]
         if not compatible_positions:
             raise ValueError(
-                f"No compatible position found for job {j_idx} ({job.aircraft.name}, phase={job.phase.name})"
+                f"No compatible position found for job {j_idx} ({job.unit.name}, phase={job.phase.name})"
             )
 
         # To reduce variable amount:

@@ -14,7 +14,7 @@ def compress_dates(jobs: List[Job], individual_dates: list[date] = None):
     for decision-making — specifically, the days on which jobs start or end.
 
     This function scans all jobs and collects the unique set of dates where a change
-    in state can occur — that is, dates when an aircraft begins or finishes a phase.
+    in state can occur — that is, dates when an unit begins or finishes a phase.
     These are the only points in time where constraints or decisions may apply.
 
     By compressing the full timeline down to just these active dates, we dramatically reduce

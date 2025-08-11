@@ -1,9 +1,9 @@
 from ortools.sat.python import cp_model
 from frjmp.model.sets.job import Job
-from frjmp.model.parameters.position_aircraft_model import (
-    PositionsAircraftModelDependency,
+from frjmp.model.parameters.position_unit_model import (
+    PositionsUnitTypeDependency,
 )
-from frjmp.model.sets.aircraft import AircraftModel
+from frjmp.model.sets.unit import UnitType
 from datetime import date
 from frjmp.utils.timeline_utils import get_active_time_indices
 import warnings
@@ -14,7 +14,7 @@ def create_pattern_assignment_variables(
     jobs: list[Job],
     compressed_dates: list[date],
     date_to_index: dict[date, int],
-    dependency: PositionsAircraftModelDependency,
+    dependency: PositionsUnitTypeDependency,
     assigned_vars,
 ):
     """
@@ -26,14 +26,12 @@ def create_pattern_assignment_variables(
     """
     pattern_assigned_vars = {}
     matrix = dependency.generate_matrix()
-    model_to_index = {
-        model: idx for idx, model in enumerate(dependency.aircraft_models)
-    }
+    model_to_index = {model: idx for idx, model in enumerate(dependency.unit_types)}
 
     for j_idx, job in enumerate(jobs):
         pattern_assigned_vars[j_idx] = {}
 
-        model_idx = model_to_index[job.aircraft.model]
+        model_idx = model_to_index[job.unit.model]
         n_patterns = len(matrix[model_idx])
 
         active_time_indices = get_active_time_indices(
@@ -69,7 +67,7 @@ def create_pattern_assignment_variables(
                         )
                     ]
                     # warnings.warn(
-                    #     f"Skipped pattern {k_idx} for Job {job} (AircraftModel={job.aircraft.model}) at t={t_idx}: "
+                    #     f"Skipped pattern {k_idx} for Job {job} (UnitType={job.unit.model}) at t={t_idx}: "
                     #     f"positions {incompatible_pos_names} do not cover job need ({job.phase.required_need}).",
                     #     stacklevel=2,
                     # )

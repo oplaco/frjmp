@@ -13,7 +13,7 @@ def plot_timestep_assignment(
     color_map,
 ):
     """
-    Plots aircraft assignments over a spatial map for each t_idx given,
+    Plots unit assignments over a spatial map for each t_idx given,
     using the assignment variables of the form assigned_vars[j_idx][p_idx][t_idx].
 
     Args:
@@ -24,7 +24,7 @@ def plot_timestep_assignment(
         solver: resolved cp_model.CpSolver.
         t_indices: list of timesteps to render.
         index_to_date: dict[t_idx] -> datetime.
-        color_map: dict[aircraft_name] -> matplotlib color.
+        color_map: dict[unit_name] -> matplotlib color.
     """
 
     assignments_by_t = {t: {} for t in t_indices}
@@ -34,8 +34,8 @@ def plot_timestep_assignment(
             for t in assigned_vars[j_idx][p_idx]:
                 if t in t_indices and solver.Value(assigned_vars[j_idx][p_idx][t]) == 1:
                     pos_name = list(position_geometry.keys())[p_idx]
-                    aircraft_name = jobs[j_idx].aircraft.name
-                    assignments_by_t[t][pos_name] = aircraft_name
+                    unit_name = jobs[j_idx].unit.name
+                    assignments_by_t[t][pos_name] = unit_name
 
     for t in t_indices:
         fig, ax = plt.subplots(figsize=(8, 6))
@@ -50,8 +50,8 @@ def plot_timestep_assignment(
         ax.set_title(f"Snapshot at t={t} ({index_to_date[t]})")
 
         for pos_name, coords in position_geometry.items():
-            aircraft = assignments_by_t[t].get(pos_name)
-            color = color_map.get(aircraft, None)
+            unit = assignments_by_t[t].get(pos_name)
+            color = color_map.get(unit, None)
 
             poly = Polygon(
                 coords,
@@ -67,8 +67,8 @@ def plot_timestep_assignment(
             xs, ys = zip(*coords)
             cx, cy = sum(xs) / len(xs), sum(ys) / len(ys)
 
-            if aircraft:
-                label = f"{pos_name}\n{aircraft}"
+            if unit:
+                label = f"{pos_name}\n{unit}"
                 text_color = "white"
             else:
                 label = pos_name
