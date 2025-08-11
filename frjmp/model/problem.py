@@ -214,7 +214,7 @@ class Problem:
             ValueError: If there is not an active job for a given aircraft in t0.
             ValueError: If the pattern assigned to a job is not valid for a given aircraft.
         """
-        t_init_idx = self.date_to_index[self.t_init]
+        t_init_idx = self.date_to_index[self.t0]
         pos_index = {p.name: idx for idx, p in enumerate(self.positions)}
         model_index = {model: idx for idx, model in enumerate(self.aircraft_models)}
         pattern_matrix = self.pos_aircraft_model_dependency.generate_matrix()
