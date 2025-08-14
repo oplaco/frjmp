@@ -1,9 +1,23 @@
-{"configurations": [
+{
+  "configurations": [
     {
-        "name": "Python: Output example",
-        "type": "python",
-        "request": "launch",
-        "program": "${workspaceFolder}/app/outputs/movement.py",
-        "cwd": "${workspaceFolder}"
+      "name": "Python: Output example",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/app/outputs/movement.py",
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "Basic Example",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/examples/basic_example.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      },
+      "justMyCode": false
     }
-]}
+  ]
+}

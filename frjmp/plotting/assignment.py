@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 
 
 def plot_assignment_gantt(
-    assigned_vars, solver, positions, jobs, ax, x_vals, color_map, use_real_dates
+    assigned_vars, solver, positions, jobs, ax, x_vals, color_map, use_real_values
 ):
     """
     Creates a Gantt-like chart showing job assignments over time, grouped by position.
@@ -18,7 +18,7 @@ def plot_assignment_gantt(
         ax: Matplotlib Axes object to draw the plot on.
         x_vals: List of time step values (either compressed indices or real dates), matching solver time steps.
         color_map: Dict mapping unit names to consistent plot colors.
-        use_real_dates: Whether the X-axis should use actual date values instead of time step indices.
+        use_real_values: Whether the X-axis should use actual date values instead of time step indices.
 
     Returns:
         fig, ax: The Matplotlib Figure and Axes with the plotted data.
@@ -51,7 +51,7 @@ def plot_assignment_gantt(
                     if t is None or t != prev + 1:
                         # Use x_vals[start] as the left edge
                         bar_left = x_vals[start]
-                        if use_real_dates:
+                        if use_real_values:
                             width = (x_vals[prev] - x_vals[start]).days + 1
                         else:
                             width = prev - start + 1
@@ -65,7 +65,7 @@ def plot_assignment_gantt(
                             edgecolor="black",
                         )
                         # Place label at midpoint
-                        if use_real_dates:
+                        if use_real_values:
                             from datetime import timedelta
 
                             label_x = bar_left + timedelta(days=width / 2)

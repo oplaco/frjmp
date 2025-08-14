@@ -9,36 +9,46 @@ The problem can be solved witouth them. These functions are related with prepoce
 """
 
 
-def insert_waiting_jobs(jobs: List[Job], phase_waiting) -> List[Job]:
-    """
-    Inserts artificial waiting jobs between real jobs of the same unit
-    when there is a gap greater than one day between them.
+from collections import defaultdict
+from frjmp.model.adapter import TimeAdapter
+from typing import List
 
-    Args:
-        jobs: list of Job objects
-        phase_waiting: special Phase object representing idle time
 
-    Returns:
-        List of original + artificial jobs
+def insert_waiting_jobs(
+    jobs: List["Job"],
+    phase_waiting: "Phase",
+    adapter: "TimeAdapter",
+) -> List["Job"]:
     """
-    jobs_by_unit = defaultdict(list)
+    Insert artificial 'waiting' jobs between real jobs of the same unit when there is
+    a gap of more than one *tick* (adapter step) between them.
+
+    The adapter defines what a tick is (day, shift, N minutes, week, ...).
+    """
+    jobs_by_unit: dict[str, list[Job]] = defaultdict(list)
     for job in jobs:
         jobs_by_unit[job.unit.name].append(job)
 
     new_jobs = list(jobs)
 
     for unit_name, unit_jobs in jobs_by_unit.items():
-        sorted_jobs = sorted(unit_jobs, key=lambda j: j.start)
+        # Sort by start tick according to the adapter
+        sorted_jobs = sorted(unit_jobs, key=lambda j: adapter.to_tick(j.start))
+
         for i in range(len(sorted_jobs) - 1):
             current = sorted_jobs[i]
             next_job = sorted_jobs[i + 1]
-            expected_next_day = current.end + timedelta(days=1)
-            if next_job.start > expected_next_day:
+
+            cur_end_tick = adapter.to_tick(current.end)
+            next_start_tick = adapter.to_tick(next_job.start)
+
+            expected_next_tick = cur_end_tick + 1
+            if next_start_tick > expected_next_tick:
                 waiting_job = Job(
                     unit=current.unit,
                     phase=phase_waiting,
-                    start=expected_next_day,
-                    end=next_job.start - timedelta(days=1),
+                    start=adapter.from_tick(expected_next_tick),
+                    end=adapter.from_tick(next_start_tick - 1),
                 )
                 new_jobs.append(waiting_job)
 

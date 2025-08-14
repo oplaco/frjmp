@@ -12,10 +12,11 @@ import warnings
 def create_pattern_assignment_variables(
     model: cp_model.CpModel,
     jobs: list[Job],
-    compressed_dates: list[date],
-    date_to_index: dict[date, int],
+    compressed_ticks: list[int],
+    ticks_to_index: dict[int, int],
     dependency: PositionsUnitTypeDependency,
     assigned_vars,
+    time_adapter,
 ):
     """
     Create Boolean variables pattern_assigned_vars[j][t][k] that select pattern k
@@ -35,7 +36,7 @@ def create_pattern_assignment_variables(
         n_patterns = len(matrix[model_idx])
 
         active_time_indices = get_active_time_indices(
-            job, compressed_dates, date_to_index
+            job, compressed_ticks, ticks_to_index, time_adapter
         )
 
         for t_idx in active_time_indices:

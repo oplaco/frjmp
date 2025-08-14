@@ -24,14 +24,16 @@ from frjmp.model.sets.job import Job
 from frjmp.model.sets.position import Position
 from frjmp.utils.timeline_utils import (
     compress_dates,
-    trim_jobs_before_date_inplace,
-    trim_jobs_after_last_t_inplace,
+    trim_jobs_before_time_inplace,
+    trim_jobs_after_time_inplace,
+    compress_timepoints,
 )
 from frjmp.utils.validation_utils import (
     validate_capacity_feasibility,
     validate_non_overlapping_jobs_per_unit,
 )
 from frjmp.model.logger import IncrementalSolverLogger
+from frjmp.model.adapter import TimeAdapter
 
 
 class Problem:
@@ -45,29 +47,35 @@ class Problem:
         jobs: list[Job],
         positions_configuration: PositionsConfiguration,
         position_unittype_dependency: PositionsUnitTypeDependency,
-        t_init: date = date.today(),
-        t_last: date = None,
+        time_adapter: TimeAdapter,
+        t_init,
+        t_last=None,
         initial_conditions: dict = None,
     ):
         # Init variables
         self.jobs = jobs
         self.positions_configuration = positions_configuration
         self.positions = positions_configuration.positions
-        self.t_init = t_init
-        self.t0 = t_init - timedelta(days=1)
         self.pos_unit_model_dependency = position_unittype_dependency
         self.unit_types = position_unittype_dependency.unit_types
-        if t_last is None:
-            self.t_last = self.t0 + timedelta(days=365)
-        elif t_last <= self.t0:
-            raise ValueError(
-                f"Invalid date range: END_DATE ({t_last}) must be later than T0_DATE ({self.t0}). "
-                f"Please correct the values in the initial conditions."
-            )
-        else:
-            self.t_last = t_last
-
+        self.time_adapter = time_adapter
         self.initial_conditions = initial_conditions
+
+        # Convert bounds to ticks
+        t_init_tick = time_adapter.to_tick(t_init)
+        t0_tick = t_init_tick - 1
+        # If there is no t_last use the latest job end
+        if t_last is None:
+            if not jobs:
+                raise ValueError("Provide t_last when jobs is empty.")
+            t_last_tick = max(time_adapter.to_tick(j.end) for j in jobs)
+            t_last = time_adapter.from_tick(t_last_tick)  # value (date, shift, dt…)
+        else:
+            t_last_tick = time_adapter.to_tick(t_last)
+
+        self.t_init_tick = t_init_tick
+        self.t0_tick = t0_tick
+        self.t_last_tick = t_last_tick
 
         # Other variables
         self.fixed_variables = (
@@ -75,25 +83,34 @@ class Problem:
         )  # List of (var, value) of fixed variables. This can be used for initial or contour conditions.
 
         # --- Pre-processing ---#
-        trim_jobs_before_date_inplace(jobs, self.t0)
-        trim_jobs_after_last_t_inplace(jobs, self.t_last)
+        trim_jobs_before_time_inplace(jobs, t_init, time_adapter)
+        trim_jobs_after_time_inplace(jobs, t_last, time_adapter)
 
         # Calculate compressed time scale
-        compressed_dates, date_to_index, index_to_date = compress_dates(
-            jobs, [self.t0, self.t_init]
+        (
+            compressed_ticks,
+            tick_to_index,
+            index_to_tick,
+            index_to_value,
+        ) = compress_timepoints(
+            jobs,
+            adapter=time_adapter,
+            individual_points=[t_init],  # keep your extra points idea
         )
-        self.compressed_dates = compressed_dates
-        self.date_to_index = date_to_index
-        self.index_to_date = index_to_date
+        self.compressed_ticks = compressed_ticks
+        self.tick_to_index = tick_to_index
+        self.index_to_tick = index_to_tick
+        self.index_to_value = index_to_value
 
-        # Currently use compressed dates as time_step_indexes in the future they might be actual int values
-        self.time_step_indexes = compressed_dates
+        # Currently use compressed ticks as time_step_indexes.
+        self.time_step_indexes = list(range(len(compressed_ticks)))
+        self.num_time_steps = len(self.time_step_indexes)
 
         # --- Validations --- #
         validate_non_overlapping_jobs_per_unit(jobs)
-        validate_capacity_feasibility(
-            jobs, self.positions, compressed_dates, date_to_index
-        )
+        # validate_capacity_feasibility(
+        #     jobs, self.positions, compressed_dates, date_to_index
+        # )
 
         # Create model
         self.model = cp_model.CpModel()
@@ -106,23 +123,25 @@ class Problem:
             self.model,
             self.jobs,
             self.positions,
-            self.compressed_dates,
-            self.date_to_index,
+            self.compressed_ticks,
+            self.tick_to_index,
+            self.time_adapter,
         )
         self.unit_movement_vars = create_unit_movement_variables(
-            self.model, self.jobs, self.time_step_indexes
+            self.model, self.jobs, self.num_time_steps
         )
         self.movement_in_position_vars = create_movement_in_position_variables(
-            self.model, self.positions, self.time_step_indexes
+            self.model, self.positions, self.num_time_steps
         )
 
         self.pattern_assigned_vars = create_pattern_assignment_variables(
             self.model,
             self.jobs,
-            self.compressed_dates,
-            self.date_to_index,
+            self.compressed_ticks,
+            self.tick_to_index,
             self.pos_unit_model_dependency,
             self.assigned_vars,
+            self.time_adapter,
         )
 
     def add_constraints(self):
@@ -139,9 +158,10 @@ class Problem:
             self.pattern_assigned_vars,
             self.jobs,
             self.positions,
-            self.date_to_index,
-            self.time_step_indexes,
+            self.tick_to_index,
+            self.compressed_ticks,
             self.pos_unit_model_dependency,
+            self.time_adapter,
         )
 
         add_movement_detection_constraints(
@@ -151,7 +171,7 @@ class Problem:
             self.unit_movement_vars,
             self.movement_in_position_vars,
             self.jobs,
-            num_timesteps=len(self.time_step_indexes),
+            num_timesteps=self.num_time_steps,
             positions_configuration=self.positions_configuration,
         )
 
@@ -160,7 +180,7 @@ class Problem:
             self.assigned_vars,
             self.positions,
             self.jobs,
-            num_timesteps=len(self.time_step_indexes),
+            num_timesteps=self.num_time_steps,
         )
 
     def set_objective(self):

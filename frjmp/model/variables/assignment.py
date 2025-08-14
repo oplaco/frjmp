@@ -9,15 +9,16 @@ def create_assignment_variables(
     model: cp_model.CpModel,
     jobs: list[Job],
     positions: list[Position],
-    compressed_dates,
-    date_to_index,
+    compressed_ticks,
+    ticks_to_index,
+    time_adapter,
 ):
     assigned_vars = {}
 
     for j_idx, job in enumerate(jobs):
         assigned_vars[j_idx] = {}
         active_time_indices = get_active_time_indices(
-            job, compressed_dates, date_to_index
+            job, compressed_ticks, ticks_to_index, time_adapter
         )
 
         # Check if any position is compatible for this job

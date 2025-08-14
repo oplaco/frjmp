@@ -1,6 +1,6 @@
-from datetime import date
 from ortools.sat.python import cp_model
 
+from frjmp.model.adapter import TimeAdapter
 from frjmp.model.sets.job import Job
 from frjmp.model.sets.position import Position
 from frjmp.model.parameters.position_unit_model import (
@@ -14,9 +14,10 @@ def add_job_assignment_constraints(
     pattern_assigned_vars: dict[int, dict[int, dict[int, cp_model.IntVar]]],
     jobs: list[Job],
     positions: list[Position],
-    date_to_index: dict[date, int],
-    compressed_dates: list[date],
+    ticks_to_index: dict[int, int],
+    compressed_ticks: list[int],
     dependency: PositionsUnitTypeDependency,
+    time_adapter: TimeAdapter,
 ):
     """
     Link pattern assignment variables to position assignment variables.
@@ -33,11 +34,13 @@ def add_job_assignment_constraints(
     for j_idx, job in enumerate(jobs):
         model_idx = model_to_index[job.unit.type]
         n_patterns = len(matrix[model_idx])
-        for t_date in compressed_dates:
-            if not (job.start <= t_date <= job.end):
+        for tick in compressed_ticks:
+            if not (
+                time_adapter.to_tick(job.start) <= tick <= time_adapter.to_tick(job.end)
+            ):
                 # Avoid creating unnecessary constraints (i.e outside time domain of the job).
                 continue
-            t_idx = date_to_index[t_date]
+            t_idx = ticks_to_index[tick]
 
             # 1. ExactlyOne over pattern_assigned_vars[j][t]
             model.AddExactlyOne(list(pattern_assigned_vars[j_idx][t_idx].values()))

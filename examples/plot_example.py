@@ -10,9 +10,13 @@ def plot_solution(problem, solver):
     color_map = {name: plt.cm.tab10(i % 10) for i, name in enumerate(unit_names)}
 
     # 2. Compute x_vals for both plots:
-    use_real_dates = False
-    time_indices = sorted(problem.index_to_date.keys())
-    x_vals = [problem.index_to_date[t] if use_real_dates else t for t in time_indices]
+    use_real_values = False  # set True to show dates/shifts/etc.
+    time_indices = problem.time_step_indexes  # [0..N-1] contiguous
+    if use_real_values:
+        # index_to_value maps compressed index -> original time value (date, (date, shift), datetime…)
+        x_vals = [problem.index_to_value[i] for i in time_indices]
+    else:
+        x_vals = time_indices
 
     # 3. Pass ax, color_map, and x_vals to both plotting functions:
     fig, axs = plt.subplots(2, 1, figsize=(14, 10), sharex=True)
@@ -25,7 +29,7 @@ def plot_solution(problem, solver):
         ax=axs[0],
         x_vals=x_vals,
         color_map=color_map,
-        use_real_dates=use_real_dates,
+        use_real_values=use_real_values,
     )
 
     plot_cumulative_movements(
@@ -34,7 +38,7 @@ def plot_solution(problem, solver):
         ax=axs[1],
         x_vals=x_vals,
         color_map=color_map,
-        use_real_dates=use_real_dates,
+        use_real_values=use_real_values,
     )
 
     # 5. Create a shared legend

@@ -5,6 +5,7 @@ if __name__ == "__main__":
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from datetime import date, timedelta
+from frjmp.model.adapter import DailyAdapter
 from frjmp.model.sets.need import Need
 from frjmp.model.sets.phase import Phase
 from frjmp.model.sets.unit import Unit, UnitType
@@ -35,6 +36,7 @@ a2 = Unit("187", a400m)
 
 # t_init
 t_init = date(2025, 4, 15)
+time_adapter = DailyAdapter(t_init)
 
 # Create Jobs
 job1 = Job(a1, edv_phase, t_init, t_init + timedelta(days=10))
@@ -42,7 +44,7 @@ job2 = Job(a2, foury_phase, date(2025, 4, 16), date(2025, 5, 20))
 job3 = Job(a2, edv_phase, date(2025, 5, 25), date(2025, 7, 20))
 
 jobs = [job1, job2, job3]
-jobs = insert_waiting_jobs(jobs, waiting_phase)
+jobs = insert_waiting_jobs(jobs, waiting_phase, time_adapter)
 
 # Create Positions
 posA = Position("Hangar A", [edv_need, wp_need, waiting_phase])
@@ -58,6 +60,7 @@ problem = Problem(
     jobs=jobs,
     positions_configuration=conf,
     position_unittype_dependency=pos_unit_dep,
+    time_adapter=time_adapter,
     t_init=t_init,
 )
 
@@ -73,7 +76,7 @@ if status == 4:
         for t_idx, var in j_dict.items():
             if solver.Value(var) == 1:
                 print(
-                    f"Movement Job {j_idx} at t={t_idx} ({problem.index_to_date[t_idx]})"
+                    f"Movement Job {j_idx} at t={t_idx} ({problem.index_to_value[t_idx]})"
                 )
 
     for j_idx, j_dict in problem.assigned_vars.items():
@@ -81,7 +84,7 @@ if status == 4:
             for t_idx, var in p_dict.items():
                 if solver.Value(var) == 1:
                     print(
-                        f"Assignment of Job {j_idx} to position {p_idx} at  t={t_idx} ({problem.index_to_date[t_idx]})"
+                        f"Assignment of Job {j_idx} to position {p_idx} at  t={t_idx} ({problem.index_to_value[t_idx]})"
                     )
 
     for j_idx, j_dict in problem.pattern_assigned_vars.items():
@@ -92,7 +95,7 @@ if status == 4:
                     pattern = job.unit.type.allowed_patterns[k_idx]
                     pos_names = [p.name for p in pattern.positions]
                     print(
-                        f"Job {j_idx} at t={t_idx} ({problem.index_to_date[t_idx]}): "
+                        f"Job {j_idx} at t={t_idx} ({problem.index_to_value[t_idx]}): "
                         f"Pattern {k_idx} → Positions {pos_names}"
                     )
 
