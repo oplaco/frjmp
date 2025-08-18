@@ -19,20 +19,23 @@ class DailyAdapter:
 
 
 class ShiftAdapter:
-    def __init__(self, origin: date, shifts: list[str]):
-        self.origin = origin
+    def __init__(self, origin: tuple[date, str], shifts: list[str]):
+        self.origin_date, self.origin_shift = origin
         self.shifts = shifts
         self.per_day = len(shifts)
+        self.origin_shift_index = self.shifts.index(self.origin_shift)
 
     def to_tick(self, v: tuple[date, str]) -> int:
         d, s = v
-        day_ticks = (d - self.origin).days * self.per_day
-        return day_ticks + self.shifts.index(s)
+        day_offset = (d - self.origin_date).days
+        shift_offset = self.shifts.index(s) - self.origin_shift_index
+        return day_offset * self.per_day + shift_offset
 
     def from_tick(self, tick: int) -> tuple[date, str]:
-        day = tick // self.per_day
-        s_idx = tick % self.per_day
-        return (self.origin + timedelta(days=day), self.shifts[s_idx])
+        total_shift_index = self.origin_shift_index + tick
+        day = total_shift_index // self.per_day
+        s_idx = total_shift_index % self.per_day
+        return (self.origin_date + timedelta(days=day), self.shifts[s_idx])
 
 
 class MinuteStepAdapter:

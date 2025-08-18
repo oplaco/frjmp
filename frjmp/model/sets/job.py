@@ -8,9 +8,11 @@ class Job:
         self,
         unit: Unit,
         phase: Phase,
-        start: date,
-        end: date,
+        start,
+        end,
     ):
+        if start is None or end is None:
+            raise ValueError("Job start and end must be defined.")
         if end < start:
             raise ValueError(
                 f"Job for {unit} {phase} end date {end} cannot be before start date {start}."
