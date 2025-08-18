@@ -76,6 +76,7 @@ class TestJobAssignmentConstraints(unittest.TestCase):
         self.index_to_value = index_to_value
         # Currently use compressed dates as time_step_indexes in the future they might be actual int values
         self.time_step_indexes = list(range(len(compressed_ticks)))
+        self.num_time_steps = len(self.time_step_indexes)
 
         self.model = cp_model.CpModel()
 
@@ -90,19 +91,20 @@ class TestJobAssignmentConstraints(unittest.TestCase):
             self.index_to_value,
         )
         self.unit_movement_vars = create_unit_movement_variables(
-            self.model, self.jobs, self.time_step_indexes
+            self.model, self.jobs, self.num_time_steps
         )
 
         self.assigned_vars = create_assignment_variables(
             self.model,
             self.jobs,
             self.positions,
-            self.compressed_dates,
-            self.date_to_index,
+            self.compressed_ticks,
+            self.tick_to_index,
+            self.adapter,
         )
 
         self.movement_in_position_vars = create_movement_in_position_variables(
-            self.model, self.positions, self.time_step_indexes
+            self.model, self.positions, self.num_time_steps
         )
 
         pos_unit_model_dependency = PositionsUnitTypeDependency(
@@ -112,10 +114,11 @@ class TestJobAssignmentConstraints(unittest.TestCase):
         self.pattern_assigned_vars = create_pattern_assignment_variables(
             self.model,
             self.jobs,
-            self.compressed_dates,
-            self.date_to_index,
+            self.compressed_ticks,
+            self.tick_to_index,
             pos_unit_model_dependency,
             self.assigned_vars,
+            self.adapter,
         )
 
         # Add basic constraints
@@ -125,11 +128,12 @@ class TestJobAssignmentConstraints(unittest.TestCase):
             self.pattern_assigned_vars,
             self.jobs,
             self.positions,
-            self.date_to_index,
-            self.time_step_indexes,
+            self.tick_to_index,
+            self.compressed_ticks,
             pos_unit_model_dependency,
+            self.adapter,
         )
-        # We intentionally skip capcity constraint and movement constraints as we only want to validate assignment-related conditions.
+        # Capacity constraint and movement constraints are intentionally left out as only assignment-related conditions are validated.
 
     def test_link_pattern_assigment(self):
         """Create a pattern containing three positions.
@@ -142,7 +146,8 @@ class TestJobAssignmentConstraints(unittest.TestCase):
         self.create_local_problem()
 
         # Job j 2 uses pattern.
-        job3_start_idx = self.date_to_index.get(self.job3.start)
+        job3_start_tick = self.adapter.to_tick(self.job3.start)
+        job3_start_idx = self.tick_to_index.get(job3_start_tick)
         self.model.Add(self.assigned_vars[2][0][job3_start_idx] == 1)
 
         solver = cp_model.CpSolver()
@@ -164,7 +169,8 @@ class TestJobAssignmentConstraints(unittest.TestCase):
         self.create_local_problem()
 
         j_idx = 2  # job3 uses unit_model_2
-        t_idx = self.date_to_index.get(self.job3.start)  # Starting date of job3
+        job3_start_tick = self.adapter.to_tick(self.job3.start)
+        t_idx = self.tick_to_index.get(job3_start_tick)  # Starting date of job3
         k_idx = 0  # There is only one defined pattern
         self.model.Add(self.pattern_assigned_vars[j_idx][t_idx][k_idx] == 1)
 

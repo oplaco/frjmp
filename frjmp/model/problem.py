@@ -232,15 +232,20 @@ class Problem:
         self.fixed_variables.append((var, value))
 
     def _apply_initial_conditions_as_fixed_patterns(self):
-        """Apply to the initial conditions (at t0) of movements and assigments.
+        """
+        Apply initial movement and assignment conditions at t0 using fixed variables.
 
         Raises:
-            ValueError: If there is not an active job for a given unit in t0.
-            ValueError: If the pattern assigned to a job is not valid for a given unit.
+            ValueError: If no active job exists at t0 for a unit.
+            ValueError: If no valid pattern matches the given assignment.
         """
-        t_init_idx = self.date_to_index[self.t0]
+        # Use compressed index for t0
+        t0_idx = self.tick_to_index[self.t0_tick]
+
+        # Position/model index maps
         pos_index = {p.name: idx for idx, p in enumerate(self.positions)}
         model_index = {model: idx for idx, model in enumerate(self.unit_types)}
+
         pattern_matrix = self.pos_unit_model_dependency.generate_matrix()
 
         for unit, assigned_positions in self.initial_conditions["assignments"].items():
@@ -248,16 +253,19 @@ class Problem:
             model = unit.type
             model_idx = model_index[model]
 
-            # Find matching job
+            # Find job active at t0_tick
             job_idx = None
             for j_idx, job in enumerate(self.jobs):
-                if job.unit == unit and job.start <= self.t_init <= job.end:
+                start_tick = self.time_adapter.to_tick(job.start)
+                end_tick = self.time_adapter.to_tick(job.end)
+                if job.unit == unit and start_tick <= self.t0_tick <= end_tick:
                     job_idx = j_idx
                     break
+
             if job_idx is None:
                 raise ValueError(f"No active job found for {unit.name} at t0.")
 
-            # Try to match pattern k_idx in model.allowed_patterns
+            # Match pattern from matrix
             matched = False
             for k_idx, pattern_row in enumerate(pattern_matrix[model_idx]):
                 pattern_positions = {
@@ -267,7 +275,7 @@ class Problem:
                 }
                 if pattern_positions == assigned_pos_names:
                     self.add_fixed_pattern_assignment(
-                        job_idx, t_init_idx, k_idx, value=True
+                        job_idx, t0_idx, k_idx, value=True
                     )
                     matched = True
                     break

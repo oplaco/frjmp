@@ -51,7 +51,8 @@ class TestMovementDependency(ProblemTestSetup):
             self.position1, self.position4, {self.position2, self.position3}
         )
 
-        t_init_idx = self.problem.date_to_index[self.t_init]
+        init_tick = self.adapter.to_tick(self.t_init)
+        t_init_idx = self.problem.tick_to_index[init_tick]
 
         # Fixed assignments
         #   Force the movement of job0 from position1 to position4
@@ -103,7 +104,8 @@ class TestMovementDependency(ProblemTestSetup):
             self.position1, self.position3, {self.position2}
         )
 
-        t_init_idx = self.problem.date_to_index[self.t_init]
+        init_tick = self.adapter.to_tick(self.t_init)
+        t_init_idx = self.problem.tick_to_index[init_tick]
         # Fixed assignments at t_init_idx for the three units and patterns (positions).
         self.problem.model.Add(
             self.problem.pattern_assigned_vars[0][t_init_idx][0] == 1
@@ -136,10 +138,10 @@ class TestMovementDependency(ProblemTestSetup):
         self.assertEqual(solver.Value(amv[self.unit1.name][t_init_idx]), 1)
         self.assertEqual(solver.Value(amv[self.unit2.name][t_init_idx]), 1)
 
-        # The position movement position1 exist and therefore triggers a position movement in position2 and position3
+        # There should be a position movement in position1 and position2 and nothing in position3
         self.assertEqual(solver.Value(pmv[0][0]), 1)
         self.assertEqual(solver.Value(pmv[1][0]), 1)
-        self.assertEqual(solver.Value(pmv[2][0]), 1)
+        self.assertEqual(solver.Value(pmv[2][0]), 0)
 
         # # The unit1 movement is not registered in t_init + 1
         self.assertEqual(solver.Value(amv[self.unit1.name][t_init_idx + 1]), 0)

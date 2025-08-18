@@ -3,6 +3,7 @@ from datetime import date
 
 from ortools.sat.python import cp_model
 
+from frjmp.model.adapter import DailyAdapter
 from frjmp.model.constraints.assignment import add_job_assignment_constraints
 from frjmp.model.constraints.capacity import add_position_capacity_constraints
 from frjmp.model.parameters.position_unit_model import (
@@ -19,7 +20,7 @@ from frjmp.model.variables.movement import (
     create_movement_in_position_variables,
 )
 from frjmp.model.variables.pattern_assignment import create_pattern_assignment_variables
-from frjmp.utils.timeline_utils import compress_dates
+from frjmp.utils.timeline_utils import compress_timepoints
 
 
 class TestMovementConstraint(unittest.TestCase):
@@ -35,35 +36,42 @@ class TestMovementConstraint(unittest.TestCase):
         self.job2 = Job(self.unit2, self.phase, date(2025, 4, 10), date(2025, 4, 15))
         self.jobs = [self.job1, self.job2]
 
+        self.adapter = DailyAdapter(date(2025, 4, 10))
+
         self.pos1 = Position("Position 1", [self.need], capacity=1)
         self.pos2 = Position("Position 2", [self.need], capacity=1)
         self.positions = [self.pos1, self.pos2]
 
         # Calculate compressed time scale
-        compressed_dates, date_to_index, index_to_date = compress_dates(self.jobs)
-        self.compressed_dates = compressed_dates
-        self.date_to_index = date_to_index
-        self.index_to_date = index_to_date
-        # Currently use compressed dates as time_step_indexes in the future they might be actual int values
-        self.time_step_indexes = compressed_dates
+        compressed_ticks, tick_to_index, index_to_tick, index_to_value = (
+            compress_timepoints(self.jobs, self.adapter)
+        )
+        self.compressed_ticks = compressed_ticks
+        self.tick_to_index = tick_to_index
+        self.index_to_tick = index_to_tick
+        self.index_to_value = index_to_value
+
+        self.time_step_indexes = list(range(len(compressed_ticks)))
+        self.num_time_steps = len(self.time_step_indexes)
 
     def create_local_problem(self):
         """Create the optimization problem resembling the frjmp.project.Problem object but with ONLY the necessary constraints and variables."""
         self.model = cp_model.CpModel()
         self.unit_movement_vars = create_unit_movement_variables(
-            self.model, self.jobs, self.time_step_indexes
+            self.model, self.jobs, self.num_time_steps
         )
 
         self.assigned_vars = create_assignment_variables(
             self.model,
             self.jobs,
             self.positions,
-            self.compressed_dates,
-            self.date_to_index,
+            self.compressed_ticks,
+            self.tick_to_index,
+            self.adapter,
         )
 
         self.movement_in_position_vars = create_movement_in_position_variables(
-            self.model, self.positions, self.time_step_indexes
+            self.model, self.positions, self.num_time_steps
         )
 
         pos_unit_model_dependency = PositionsUnitTypeDependency(
@@ -73,10 +81,11 @@ class TestMovementConstraint(unittest.TestCase):
         self.pattern_assigned_vars = create_pattern_assignment_variables(
             self.model,
             self.jobs,
-            self.compressed_dates,
-            self.date_to_index,
+            self.compressed_ticks,
+            self.tick_to_index,
             pos_unit_model_dependency,
             self.assigned_vars,
+            self.adapter,
         )
 
         # Add basic assigment constraints.
@@ -86,9 +95,10 @@ class TestMovementConstraint(unittest.TestCase):
             self.pattern_assigned_vars,
             self.jobs,
             self.positions,
-            self.date_to_index,
-            self.time_step_indexes,
+            self.tick_to_index,
+            self.compressed_ticks,
             pos_unit_model_dependency,
+            self.adapter,
         )
 
         # Add capacity constraint that needs assigment constraint to make sense.
@@ -97,7 +107,7 @@ class TestMovementConstraint(unittest.TestCase):
             self.assigned_vars,
             self.positions,
             self.jobs,
-            num_timesteps=len(self.time_step_indexes),
+            self.num_time_steps,
         )
 
     def test_capacity_constraint_surpass(self):
