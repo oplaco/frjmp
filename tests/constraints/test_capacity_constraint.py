@@ -35,8 +35,8 @@ class TestMovementConstraint(unittest.TestCase):
         self.job2 = Job(self.unit2, self.phase, date(2025, 4, 10), date(2025, 4, 15))
         self.jobs = [self.job1, self.job2]
 
-        self.pos1 = Position("Hangar A", [self.need], capacity=1)
-        self.pos2 = Position("Hangar B", [self.need], capacity=1)
+        self.pos1 = Position("Position 1", [self.need], capacity=1)
+        self.pos2 = Position("Position 2", [self.need], capacity=1)
         self.positions = [self.pos1, self.pos2]
 
         # Calculate compressed time scale

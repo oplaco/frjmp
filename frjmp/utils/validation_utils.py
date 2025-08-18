@@ -1,67 +1,75 @@
 from collections import defaultdict
-from datetime import date
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Any
+
+from frjmp.model.adapter import TimeAdapter
 from frjmp.model.sets.job import Job
 from frjmp.model.sets.position import Position
 
 
 def validate_capacity_feasibility(
-    jobs: List[Job],
-    positions: List[Position],
-    compressed_dates: List[date],
-    date_to_index: Dict[date, int],
+    jobs: List["Job"],
+    positions: List["Position"],
+    compressed_ticks: List[int],
+    tick_to_index: Dict[int, int],
+    adapter: TimeAdapter,
+    index_to_value: Dict[int, Any],
 ) -> Dict[int, Dict[str, Tuple[int, int]]]:
     """
-    Validates that for each compressed time step, the demand per need is within
+    Validates that for each compressed tick, the demand per need is within
     the capacity provided by positions that cover that need, AND that overall
     capacity is enough to handle total demand.
 
-    Returns a summary per timestep.
+    Returns:
+        Dict[t_idx] = {
+            total_capacity: int,
+            total_demand: int,
+            per_need: Dict[need_name] = (capacity, demand)
+        }
 
     Raises:
-        ValueError: If at any timestep, any need has more demand than available capacity,
-                    or total demand exceeds total capacity.
+        ValueError: If at any tick, any need has more demand than capacity.
     """
     summary = {}
 
-    for d in compressed_dates:
-        t_idx = date_to_index[d]
+    for tick in compressed_ticks:
+        t_idx = tick_to_index[tick]
+        d = index_to_value[t_idx]
 
         # Count job demand per need
         need_demand = defaultdict(int)
         for job in jobs:
-            if job.start <= d <= job.end:
+            start_tick = adapter.to_tick(job.start)
+            end_tick = adapter.to_tick(job.end)
+            if start_tick <= tick <= end_tick:
                 need_name = job.phase.required_need.name
                 need_demand[need_name] += 1
 
-        # Total demand (sum of all active jobs)
         total_demand = sum(need_demand.values())
-
-        # Total capacity
         total_capacity = sum(pos.capacity for pos in positions)
 
-        # Per-need capacity (only from positions that serve that need)
+        # Per-need capacity
         per_need_capacity = defaultdict(int)
         for pos in positions:
             for need in pos.available_needs:
                 per_need_capacity[need.name] += pos.capacity
 
-        # Check each need independently
+        # Per-need checks
         for need, demand in need_demand.items():
             available = per_need_capacity.get(need, 0)
             if demand > available:
                 raise ValueError(
-                    f"On {d}, need '{need}' has demand {demand} "
-                    f"but only {available} capacity is available from positions that support it."
+                    f"At {d}, need '{need}' has demand {demand} "
+                    f"but only {available} capacity is available."
                 )
 
-        # Optional overall system check
+        # Global check
         if total_demand > total_capacity:
             raise ValueError(
-                f"On {d}, total job demand is {total_demand}, but total system capacity is {total_capacity}."
+                f"At {d}, total job demand is {total_demand}, "
+                f"but system capacity is {total_capacity}."
             )
 
-        # Build summary
+        # Summary output
         summary[t_idx] = {
             "total_capacity": total_capacity,
             "total_demand": total_demand,
@@ -74,12 +82,13 @@ def validate_capacity_feasibility(
     return summary
 
 
-def validate_non_overlapping_jobs_per_unit(jobs: List[Job]):
+def validate_non_overlapping_jobs_per_unit(jobs: List["Job"], adapter: TimeAdapter):
     """
-    Validates that no unit has overlapping jobs in time (inclusive).
+    Validates that no unit has overlapping jobs in time (inclusive),
+    based on tick comparisons using the provided adapter.
 
     Raises:
-        ValueError: If any unit has two jobs that overlap.
+        ValueError: If any unit has two overlapping jobs.
     """
     unit_jobs = defaultdict(list)
 
@@ -87,11 +96,17 @@ def validate_non_overlapping_jobs_per_unit(jobs: List[Job]):
         unit_jobs[job.unit.name].append(job)
 
     for unit_name, job_list in unit_jobs.items():
-        sorted_jobs = sorted(job_list, key=lambda j: j.start)
+        # Sort using tick value of job.start
+        sorted_jobs = sorted(job_list, key=lambda j: adapter.to_tick(j.start))
+
         for i in range(1, len(sorted_jobs)):
             prev = sorted_jobs[i - 1]
             curr = sorted_jobs[i]
-            if curr.start <= prev.end:
+
+            prev_end_tick = adapter.to_tick(prev.end)
+            curr_start_tick = adapter.to_tick(curr.start)
+
+            if curr_start_tick <= prev_end_tick:
                 raise ValueError(
                     f"Unit '{unit_name}' has overlapping jobs: "
                     f"{prev.start}–{prev.end} and {curr.start}–{curr.end}"

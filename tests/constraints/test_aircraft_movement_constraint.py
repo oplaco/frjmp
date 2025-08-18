@@ -38,9 +38,9 @@ class TestMovementConstraint(unittest.TestCase):
         self.phase1 = Phase("repair-phase-1", self.need)
         self.phase2 = Phase("repair-phase-2", self.need)
 
-        self.pos1 = Position("Hangar A", [self.need], capacity=1)
-        self.pos2 = Position("Hangar B", [self.need], capacity=1)
-        self.pos3 = Position("Hangar C", [self.need], capacity=1)
+        self.pos1 = Position("Position 1", [self.need], capacity=1)
+        self.pos2 = Position("Position 2", [self.need], capacity=1)
+        self.pos3 = Position("Position 3", [self.need], capacity=1)
         self.positions = [self.pos1, self.pos2, self.pos3]
 
     def create_local_problem(self):
@@ -217,7 +217,7 @@ class TestMovementConstraint(unittest.TestCase):
 
         self.create_local_problem()
 
-        # Create movement from pattern 0 (Hangar A) to pattern 1 (Hangar B) between t and t+1
+        # Create movement from pattern 0 (Position 1) to pattern 1 (Position 2) between t and t+1
         t_idx = 0
         unit_name = self.unit.name
         pp_idx = 0  # previous position index

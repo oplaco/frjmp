@@ -47,8 +47,8 @@ jobs = [job1, job2, job3]
 jobs = insert_waiting_jobs(jobs, waiting_phase, time_adapter)
 
 # Create Positions
-posA = Position("Hangar A", [edv_need, wp_need, waiting_phase])
-posB = Position("Hangar B", [edv_need, wp_need, waiting_phase])
+posA = Position("Position 1", [edv_need, wp_need, waiting_phase])
+posB = Position("Position 2", [edv_need, wp_need, waiting_phase])
 
 positions = [posA, posB]
 conf = PositionsConfiguration(positions)

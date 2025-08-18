@@ -1,6 +1,7 @@
 import unittest
 from datetime import date
 
+from frjmp.model.adapter import DailyAdapter
 from frjmp.model.problem import Problem
 from frjmp.model.sets.unit import Unit, UnitType
 from frjmp.model.sets.need import Need
@@ -37,6 +38,8 @@ class BasicTestSetup(unittest.TestCase):
         self.date3 = date(2025, 2, 12)
         self.date4 = date(2025, 3, 4)
 
+        self.adapter = DailyAdapter(self.date1)
+
         self.unit_model = UnitType("C295")
         self.unit_types = [self.unit_model]
         self.unit1 = Unit("MSN 001", self.unit_model)
@@ -51,9 +54,9 @@ class ProblemTestSetup(BasicTestSetup):
         job2 = Job(self.unit2, self.phase1, self.date1, self.date2)
         job3 = Job(self.unit3, self.phase1, self.date1, self.date2)
         jobs = [job1, job2, job3]
-        self.position1 = Position("Hangar A", [self.need1], capacity=1)
-        self.position2 = Position("Hangar B", [self.need1], capacity=1)
-        self.position3 = Position("Hangar C", [self.need1], capacity=1)
+        self.position1 = Position("Position 1", [self.need1], capacity=1)
+        self.position2 = Position("Position 2", [self.need1], capacity=1)
+        self.position3 = Position("Position 3", [self.need1], capacity=1)
         self.position4 = Position("Hangar D", [self.need1], capacity=1)
         positions = [self.position1, self.position2, self.position3, self.position4]
         pc = PositionsConfiguration(positions=positions)

@@ -23,7 +23,6 @@ from frjmp.model.sets.unit import UnitType
 from frjmp.model.sets.job import Job
 from frjmp.model.sets.position import Position
 from frjmp.utils.timeline_utils import (
-    compress_dates,
     trim_jobs_before_time_inplace,
     trim_jobs_after_time_inplace,
     compress_timepoints,
