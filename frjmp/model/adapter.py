@@ -20,6 +20,7 @@ class DailyAdapter:
 
 class ShiftAdapter:
     def __init__(self, origin: tuple[date, str], shifts: list[str]):
+        self.origin = origin
         self.origin_date, self.origin_shift = origin
         self.shifts = shifts
         self.per_day = len(shifts)

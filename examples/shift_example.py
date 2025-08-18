@@ -69,7 +69,6 @@ problem = Problem(
     positions_configuration=conf,
     position_unittype_dependency=pos_unit_dep,
     time_adapter=time_adapter,
-    t_init=origin,
 )
 
 

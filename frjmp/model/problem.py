@@ -47,7 +47,6 @@ class Problem:
         positions_configuration: PositionsConfiguration,
         position_unittype_dependency: PositionsUnitTypeDependency,
         time_adapter: TimeAdapter,
-        t_init,
         t_last=None,
         initial_conditions: dict = None,
     ):
@@ -58,6 +57,7 @@ class Problem:
         self.pos_unit_model_dependency = position_unittype_dependency
         self.unit_types = position_unittype_dependency.unit_types
         self.time_adapter = time_adapter
+        t_init = time_adapter.origin
         self.initial_conditions = initial_conditions
 
         # Convert bounds to ticks
@@ -94,7 +94,7 @@ class Problem:
         ) = compress_timepoints(
             jobs,
             adapter=time_adapter,
-            individual_points=[t_init],  # keep your extra points idea
+            individual_points=[t_init],
         )
         self.compressed_ticks = compressed_ticks
         self.tick_to_index = tick_to_index
@@ -106,10 +106,15 @@ class Problem:
         self.num_time_steps = len(self.time_step_indexes)
 
         # --- Validations --- #
-        validate_non_overlapping_jobs_per_unit(jobs)
-        # validate_capacity_feasibility(
-        #     jobs, self.positions, compressed_dates, date_to_index
-        # )
+        validate_non_overlapping_jobs_per_unit(jobs, self.time_adapter)
+        validate_capacity_feasibility(
+            jobs,
+            self.positions,
+            self.compressed_ticks,
+            self.tick_to_index,
+            self.time_adapter,
+            self.index_to_value,
+        )
 
         # Create model
         self.model = cp_model.CpModel()

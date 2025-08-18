@@ -10,7 +10,7 @@ class TestPreprocessingUtils(BasicTestSetup):
             Job(self.unit1, self.phase1, date(2025, 1, 1), date(2025, 1, 2)),
             Job(self.unit1, self.phase2, date(2025, 1, 5), date(2025, 1, 6)),
         ]
-        new_jobs = insert_waiting_jobs(jobs, self.waiting_phase)
+        new_jobs = insert_waiting_jobs(jobs, self.waiting_phase, self.adapter)
 
         self.assertEqual(len(new_jobs), 3)  # One job has been added
         self.assertEqual(new_jobs[2].start, date(2025, 1, 3))
@@ -23,7 +23,7 @@ class TestPreprocessingUtils(BasicTestSetup):
             Job(self.unit1, self.phase2, date(2025, 1, 5), date(2025, 1, 8)),
             Job(self.unit1, self.phase3, date(2025, 2, 5), date(2025, 2, 15)),
         ]
-        new_jobs = insert_waiting_jobs(jobs, self.waiting_phase)
+        new_jobs = insert_waiting_jobs(jobs, self.waiting_phase, self.adapter)
 
         self.assertEqual(len(new_jobs), 5)  # Two jobs have been added
         self.assertEqual(new_jobs[3].start, date(2025, 1, 3))
@@ -38,5 +38,5 @@ class TestPreprocessingUtils(BasicTestSetup):
             Job(self.unit1, self.waiting_phase, date(2025, 1, 1), date(2025, 1, 2)),
             Job(self.unit1, self.waiting_phase, date(2025, 1, 3), date(2025, 1, 5)),
         ]
-        new_jobs = insert_waiting_jobs(jobs, self.waiting_phase)
+        new_jobs = insert_waiting_jobs(jobs, self.waiting_phase, self.adapter)
         self.assertEqual(len(new_jobs), 2)  # No job has been added

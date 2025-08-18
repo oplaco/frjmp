@@ -60,6 +60,7 @@ class ProblemTestSetup(BasicTestSetup):
         self.position4 = Position("Hangar D", [self.need1], capacity=1)
         positions = [self.position1, self.position2, self.position3, self.position4]
         pc = PositionsConfiguration(positions=positions)
-        pad = PositionsUnitTypeDependency(self.unit_types, positions)
+        pud = PositionsUnitTypeDependency(self.unit_types, positions)
         self.t_init = self.date1
-        self.problem = Problem(jobs, pc, pad, self.t_init)
+        self.adapter = DailyAdapter(self.t_init)
+        self.problem = Problem(jobs, pc, pud, self.adapter)
