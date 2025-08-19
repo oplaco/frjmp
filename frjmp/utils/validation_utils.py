@@ -1,4 +1,5 @@
 from collections import defaultdict
+from datetime import date
 from typing import List, Dict, Tuple, Any
 
 from frjmp.model.adapter import TimeAdapter
@@ -111,3 +112,31 @@ def validate_non_overlapping_jobs_per_unit(jobs: List["Job"], adapter: TimeAdapt
                     f"Unit '{unit_name}' has overlapping jobs: "
                     f"{prev.start}–{prev.end} and {curr.start}–{curr.end}"
                 )
+
+
+def validate_job_time_format(jobs: list["Job"], adapter: "TimeAdapter") -> None:
+    """
+    Validates that all jobs have start/end values matching the expected format
+    defined by the time adapter.
+
+    Raises:
+        TypeError: If any job has invalid start or end time.
+    """
+    expected = adapter.time_value_type
+
+    def is_valid(value):
+        if expected == (date, str):
+            return (
+                isinstance(value, tuple)
+                and len(value) == 2
+                and isinstance(value[0], date)
+                and isinstance(value[1], str)
+            )
+        return isinstance(value, expected)
+
+    for job in jobs:
+        if not is_valid(job.start) or not is_valid(job.end):
+            raise TypeError(
+                f"Job {job} has invalid time format: expected {expected}, "
+                f"got start={type(job.start)}, end={type(job.end)}"
+            )

@@ -30,6 +30,7 @@ from frjmp.utils.timeline_utils import (
 from frjmp.utils.validation_utils import (
     validate_capacity_feasibility,
     validate_non_overlapping_jobs_per_unit,
+    validate_job_time_format,
 )
 from frjmp.model.logger import IncrementalSolverLogger
 from frjmp.model.adapter import TimeAdapter
@@ -84,6 +85,8 @@ class Problem:
         )  # List of (var, value) of fixed variables. This can be used for initial or contour conditions.
 
         # --- Pre-processing ---#
+        validate_job_time_format(jobs, time_adapter)
+        validate_non_overlapping_jobs_per_unit(jobs, time_adapter)
         trim_jobs_before_time_inplace(jobs, t0, time_adapter)
         trim_jobs_after_time_inplace(jobs, t_last, time_adapter)
 
@@ -103,12 +106,11 @@ class Problem:
         self.index_to_tick = index_to_tick
         self.index_to_value = index_to_value
 
-        # Currently use compressed ticks as time_step_indexes.
+        # Time step indexes start at 0 like: 0, 1, ...., len(compressed_ticks)
         self.time_step_indexes = list(range(len(compressed_ticks)))
         self.num_time_steps = len(self.time_step_indexes)
 
-        # --- Validations --- #
-        validate_non_overlapping_jobs_per_unit(jobs, self.time_adapter)
+        # --- Feasability Validations --- #
         validate_capacity_feasibility(
             jobs,
             self.positions,

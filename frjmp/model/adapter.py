@@ -8,6 +8,8 @@ class TimeAdapter(Protocol):
 
 
 class DailyAdapter:
+    time_value_type = date
+
     def __init__(self, origin: date):
         self.origin = origin
 
@@ -19,7 +21,11 @@ class DailyAdapter:
 
 
 class ShiftAdapter:
+    time_value_type = (date, str)
+
     def __init__(self, origin: tuple[date, str], shifts: list[str]):
+        if not all(isinstance(s, str) for s in shifts):
+            raise TypeError(f"All shifts must be strings. Got: {shifts}")
         self.origin = origin
         self.origin_date, self.origin_shift = origin
         self.shifts = shifts
@@ -29,7 +35,13 @@ class ShiftAdapter:
     def to_tick(self, v: tuple[date, str]) -> int:
         d, s = v
         day_offset = (d - self.origin_date).days
-        shift_offset = self.shifts.index(s) - self.origin_shift_index
+        try:
+            shift_offset = self.shifts.index(s) - self.origin_shift_index
+        except ValueError:
+            raise ValueError(
+                f"Invalid shift label '{s}' for date {d}. "
+                f"Expected one of: {self.shifts}"
+            )
         return day_offset * self.per_day + shift_offset
 
     def from_tick(self, tick: int) -> tuple[date, str]:
@@ -40,6 +52,8 @@ class ShiftAdapter:
 
 
 class MinuteStepAdapter:
+    time_value_type = datetime
+
     def __init__(self, origin: datetime, step_minutes: int):
         self.origin = origin
         self.step = step_minutes
@@ -53,6 +67,8 @@ class MinuteStepAdapter:
 
 
 class WeeklyAdapter(DailyAdapter):
+    time_value_type = int
+
     def to_tick(self, d: date) -> int:
         return super().to_tick(d) // 7
 

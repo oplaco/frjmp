@@ -42,13 +42,13 @@ time_adapter = ShiftAdapter(origin, shifts)
 
 # Create Jobs
 job1 = Job(
-    u1, cleaning_phase, [date(2025, 4, 15), "Evening"], [date(2025, 4, 19), "Night"]
+    u1, cleaning_phase, (date(2025, 4, 15), "Evening"), (date(2025, 4, 19), "Night")
 )
 job2 = Job(
-    u2, repair_phase, [date(2025, 4, 17), "Morning"], [date(2025, 5, 1), "Night"]
+    u2, repair_phase, (date(2025, 4, 17), "Morning"), (date(2025, 5, 1), "Night")
 )
 job3 = Job(
-    u3, cleaning_phase, [date(2025, 5, 3), "Morning"], [date(2025, 5, 13), "Night"]
+    u3, cleaning_phase, (date(2025, 5, 3), "Night"), (date(2025, 5, 13), "Night")
 )
 
 jobs = [job1, job2, job3]
