@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "frjmp"
-version = "0.2.0.dev" 
+version = "0.3.0.dev" 
 description = "Google OR-Tools wrapper for solving a Flexible Reactive Job Shop Movement Problem (FRJMP)"
 readme = "README.md"
 requires-python = ">=3.11"
