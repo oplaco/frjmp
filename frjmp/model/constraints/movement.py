@@ -198,8 +198,6 @@ def add_movement_dependency_constraints(
                 if t + 1 in pattern_assigned_vars[j]:
                     pat_vars_t1.extend(pattern_assigned_vars[j][t + 1].items())
 
-            if ac_name == "ALPHA" and t == 0:
-                pass
             # Unit inactive in one slice?  Nothing to do
             if not pat_vars_t and not pat_vars_t1:
                 continue

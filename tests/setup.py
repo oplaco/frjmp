@@ -45,6 +45,7 @@ class BasicTestSetup(unittest.TestCase):
         self.unit1 = Unit("MSN 001", self.unit_model)
         self.unit2 = Unit("MSN 002", self.unit_model)
         self.unit3 = Unit("MSN 003", self.unit_model)
+        self.unit4 = Unit("MSN 004", self.unit_model)
 
 
 class ProblemTestSetup(BasicTestSetup):
@@ -53,14 +54,14 @@ class ProblemTestSetup(BasicTestSetup):
         job1 = Job(self.unit1, self.phase1, self.date1, self.date3)
         job2 = Job(self.unit2, self.phase1, self.date1, self.date2)
         job3 = Job(self.unit3, self.phase1, self.date1, self.date2)
-        jobs = [job1, job2, job3]
+        self.jobs = [job1, job2, job3]
         self.position1 = Position("Position 1", [self.need1], capacity=1)
         self.position2 = Position("Position 2", [self.need1], capacity=1)
         self.position3 = Position("Position 3", [self.need1], capacity=1)
-        self.position4 = Position("Hangar D", [self.need1], capacity=1)
+        self.position4 = Position("Position 4", [self.need1], capacity=1)
         positions = [self.position1, self.position2, self.position3, self.position4]
-        pc = PositionsConfiguration(positions=positions)
-        pud = PositionsUnitTypeDependency(self.unit_types, positions)
+        self.pc = PositionsConfiguration(positions=positions)
+        self.pud = PositionsUnitTypeDependency(self.unit_types, positions)
         self.t_init = self.date1
         self.adapter = DailyAdapter(self.t_init)
-        self.problem = Problem(jobs, pc, pud, self.adapter)
+        self.problem = Problem(self.jobs, self.pc, self.pud, self.adapter)

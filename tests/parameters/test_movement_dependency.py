@@ -139,9 +139,9 @@ class TestMovementDependency(ProblemTestSetup):
         self.assertEqual(solver.Value(amv[self.unit2.name][t_init_idx]), 1)
 
         # There should be a position movement in position1 and position2 and nothing in position3
-        self.assertEqual(solver.Value(pmv[0][0]), 1)
-        self.assertEqual(solver.Value(pmv[1][0]), 1)
-        self.assertEqual(solver.Value(pmv[2][0]), 0)
+        self.assertEqual(solver.Value(pmv[0][t_init_idx]), 1)
+        self.assertEqual(solver.Value(pmv[1][t_init_idx]), 1)
+        self.assertEqual(solver.Value(pmv[2][t_init_idx]), 0)
 
         # # The unit1 movement is not registered in t_init + 1
         self.assertEqual(solver.Value(amv[self.unit1.name][t_init_idx + 1]), 0)

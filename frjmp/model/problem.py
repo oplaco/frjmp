@@ -63,6 +63,7 @@ class Problem:
         # Convert bounds to ticks
         t_init_tick = time_adapter.to_tick(t_init)
         t0_tick = t_init_tick - 1
+        t0 = time_adapter.from_tick(t0_tick)
         # If there is no t_last use the latest job end
         if t_last is None:
             if not jobs:
@@ -74,6 +75,7 @@ class Problem:
 
         self.t_init_tick = t_init_tick
         self.t0_tick = t0_tick
+        self.t0 = t0
         self.t_last_tick = t_last_tick
 
         # Other variables
@@ -82,7 +84,7 @@ class Problem:
         )  # List of (var, value) of fixed variables. This can be used for initial or contour conditions.
 
         # --- Pre-processing ---#
-        trim_jobs_before_time_inplace(jobs, t_init, time_adapter)
+        trim_jobs_before_time_inplace(jobs, t0, time_adapter)
         trim_jobs_after_time_inplace(jobs, t_last, time_adapter)
 
         # Calculate compressed time scale
@@ -94,7 +96,7 @@ class Problem:
         ) = compress_timepoints(
             jobs,
             adapter=time_adapter,
-            individual_points=[t_init],
+            individual_points=[self.t0],  # Include the t0 point.
         )
         self.compressed_ticks = compressed_ticks
         self.tick_to_index = tick_to_index
