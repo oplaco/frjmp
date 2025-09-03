@@ -42,15 +42,21 @@ class TestJobAssignmentConstraints(unittest.TestCase):
         self.phase2 = Phase("overhaul-phase", self.need2)
         self.phase3 = Phase("fal", self.need3)
 
-        self.job1 = Job(self.unit1, self.phase1, date(2025, 4, 10), date(2025, 4, 12))
-        self.job2 = Job(self.unit1, self.phase1, date(2025, 4, 17), date(2025, 4, 20))
-
-        self.job3 = Job(self.unit2, self.phase1, date(2025, 4, 21), date(2025, 4, 30))
-
-        self.job4 = Job(self.unit3, self.phase1, date(2025, 4, 27), date(2025, 5, 5))
-
-        self.jobs = [self.job1, self.job2, self.job3, self.job4]
         self.adapter = DailyAdapter(origin=date(2024, 1, 1))
+
+        self.job1 = Job(
+            self.unit1, self.phase1, self.adapter, date(2025, 4, 10), date(2025, 4, 12)
+        )
+        self.job2 = Job(
+            self.unit1, self.phase1, self.adapter, date(2025, 4, 17), date(2025, 4, 20)
+        )
+        self.job3 = Job(
+            self.unit2, self.phase1, self.adapter, date(2025, 4, 21), date(2025, 4, 30)
+        )
+        self.job4 = Job(
+            self.unit3, self.phase1, self.adapter, date(2025, 4, 27), date(2025, 5, 5)
+        )
+        self.jobs = [self.job1, self.job2, self.job3, self.job4]
 
         self.pos1 = Position(
             "Position 1", [self.need1, self.need2, self.need3], capacity=1

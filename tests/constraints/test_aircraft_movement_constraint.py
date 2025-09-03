@@ -148,9 +148,15 @@ class TestMovementConstraint(unittest.TestCase):
         self.model.Minimize(total_movements)
 
     def test_movement_detected_when_pattern_changes_same_job(self):
-        self.job1 = Job(self.unit, self.phase1, date(2025, 4, 10), date(2025, 4, 15))
-        self.job3 = Job(self.unit2, self.phase2, date(2025, 4, 13), date(2025, 4, 15))
-        self.job2 = Job(self.unit2, self.phase2, date(2025, 4, 16), date(2025, 4, 20))
+        self.job1 = Job(
+            self.unit, self.phase1, self.adapter, date(2025, 4, 10), date(2025, 4, 15)
+        )
+        self.job3 = Job(
+            self.unit2, self.phase2, self.adapter, date(2025, 4, 13), date(2025, 4, 15)
+        )
+        self.job2 = Job(
+            self.unit2, self.phase2, self.adapter, date(2025, 4, 16), date(2025, 4, 20)
+        )
         self.jobs = [self.job1, self.job2, self.job3]
         self.create_local_problem()
         # To isolate the movement constraint. Fake the other crucial constraint, the assigment constraint by setting some values.
@@ -176,8 +182,12 @@ class TestMovementConstraint(unittest.TestCase):
         self.assertEqual(solver.Value(self.unit_movement_vars[self.unit.name][2]), 1)
 
     def test_movement_detected_when_pattern_changes_different_job_same_unit(self):
-        self.job1 = Job(self.unit, self.phase1, date(2025, 4, 10), date(2025, 4, 15))
-        self.job2 = Job(self.unit, self.phase2, date(2025, 4, 16), date(2025, 4, 20))
+        self.job1 = Job(
+            self.unit, self.phase1, self.adapter, date(2025, 4, 10), date(2025, 4, 15)
+        )
+        self.job2 = Job(
+            self.unit, self.phase2, self.adapter, date(2025, 4, 16), date(2025, 4, 20)
+        )
         self.jobs = [self.job1, self.job2]
 
         self.create_local_problem()
@@ -221,8 +231,12 @@ class TestMovementConstraint(unittest.TestCase):
         """An unit movement between t and t+1 (i.e at t) between position p and p' must enforce
         a position movement at t in both p and p'.
         """
-        self.job1 = Job(self.unit, self.phase1, date(2025, 4, 10), date(2025, 4, 15))
-        self.job2 = Job(self.unit, self.phase2, date(2025, 4, 16), date(2025, 4, 20))
+        self.job1 = Job(
+            self.unit, self.phase1, self.adapter, date(2025, 4, 10), date(2025, 4, 15)
+        )
+        self.job2 = Job(
+            self.unit, self.phase2, self.adapter, date(2025, 4, 16), date(2025, 4, 20)
+        )
         self.jobs = [self.job1, self.job2]
 
         self.create_local_problem()
@@ -251,8 +265,12 @@ class TestMovementConstraint(unittest.TestCase):
         """On the contrary, if there is a movement in postion p at time t. There is only an unit movement
         if any of the jobs of that unit is assigned to that position according to assigned_var[j][p][t] (for all j).
         """
-        self.job1 = Job(self.unit, self.phase1, date(2025, 4, 10), date(2025, 4, 15))
-        self.job2 = Job(self.unit, self.phase2, date(2025, 4, 16), date(2025, 4, 20))
+        self.job1 = Job(
+            self.unit, self.phase1, self.adapter, date(2025, 4, 10), date(2025, 4, 15)
+        )
+        self.job2 = Job(
+            self.unit, self.phase2, self.adapter, date(2025, 4, 16), date(2025, 4, 20)
+        )
         self.jobs = [self.job1, self.job2]
 
         self.create_local_problem()

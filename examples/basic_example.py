@@ -39,9 +39,9 @@ t_init = date(2025, 4, 15)
 time_adapter = DailyAdapter(t_init)
 
 # Create Jobs
-job1 = Job(a1, edv_phase, t_init, t_init + timedelta(days=10))
-job2 = Job(a2, foury_phase, date(2025, 4, 16), date(2025, 5, 20))
-job3 = Job(a2, edv_phase, date(2025, 5, 25), date(2025, 7, 20))
+job1 = Job(a1, edv_phase, time_adapter, t_init, t_init + timedelta(days=10))
+job2 = Job(a2, foury_phase, time_adapter, date(2025, 4, 16), date(2025, 5, 20))
+job3 = Job(a2, edv_phase, time_adapter, date(2025, 5, 25), date(2025, 7, 20))
 
 jobs = [job1, job2, job3]
 jobs = insert_waiting_jobs(jobs, waiting_phase, time_adapter)

@@ -32,11 +32,15 @@ class TestMovementConstraint(unittest.TestCase):
         self.need = Need("repair")
         self.phase = Phase("repair-phase", self.need)
 
-        self.job1 = Job(self.unit1, self.phase, date(2025, 4, 10), date(2025, 4, 15))
-        self.job2 = Job(self.unit2, self.phase, date(2025, 4, 10), date(2025, 4, 15))
-        self.jobs = [self.job1, self.job2]
-
         self.adapter = DailyAdapter(date(2025, 4, 10))
+
+        self.job1 = Job(
+            self.unit1, self.phase, self.adapter, date(2025, 4, 10), date(2025, 4, 15)
+        )
+        self.job2 = Job(
+            self.unit2, self.phase, self.adapter, date(2025, 4, 10), date(2025, 4, 15)
+        )
+        self.jobs = [self.job1, self.job2]
 
         self.pos1 = Position("Position 1", [self.need], capacity=1)
         self.pos2 = Position("Position 2", [self.need], capacity=1)

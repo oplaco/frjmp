@@ -47,6 +47,7 @@ def insert_waiting_jobs(
                 waiting_job = Job(
                     unit=current.unit,
                     phase=phase_waiting,
+                    adapter=adapter,
                     start=adapter.from_tick(expected_next_tick),
                     end=adapter.from_tick(next_start_tick - 1),
                 )

@@ -3,13 +3,12 @@ from datetime import date, timedelta, datetime
 
 
 class TimeAdapter(Protocol):
+    def validate_time_value_type(self, value: Any, name: str = "value") -> None: ...
     def to_tick(self, value: Any) -> int: ...
     def from_tick(self, tick: int) -> Any: ...
 
 
 class DailyAdapter:
-    time_value_type = date
-
     def __init__(self, origin: date):
         self.origin = origin
 
@@ -19,10 +18,12 @@ class DailyAdapter:
     def from_tick(self, tick: int) -> date:
         return self.origin + timedelta(days=tick)
 
+    def validate_time_value_type(self, value: Any, name: str = "value") -> None:
+        if not isinstance(value, date):
+            raise TypeError(f"{name} must be date. Got {value}")
+
 
 class ShiftAdapter:
-    time_value_type = (date, str)
-
     def __init__(self, origin: tuple[date, str], shifts: list[str]):
         if not all(isinstance(s, str) for s in shifts):
             raise TypeError(f"All shifts must be strings. Got: {shifts}")
@@ -31,6 +32,15 @@ class ShiftAdapter:
         self.shifts = shifts
         self.per_day = len(shifts)
         self.origin_shift_index = self.shifts.index(self.origin_shift)
+
+    def validate_time_value_type(self, value: Any, name: str = "value") -> None:
+        if not (
+            isinstance(value, tuple)
+            and len(value) == 2
+            and isinstance(value[0], date)
+            and isinstance(value[1], str)
+        ):
+            raise TypeError(f"{name} must be (date, str). Got {value}")
 
     def to_tick(self, v: tuple[date, str]) -> int:
         d, s = v
@@ -52,11 +62,13 @@ class ShiftAdapter:
 
 
 class MinuteStepAdapter:
-    time_value_type = datetime
-
     def __init__(self, origin: datetime, step_minutes: int):
         self.origin = origin
         self.step = step_minutes
+
+    def validate_time_value_type(self, value: Any, name: str = "value") -> None:
+        if not isinstance(value, datetime):
+            raise TypeError(f"{name} must be datetime. Got {value}")
 
     def to_tick(self, dt: datetime) -> int:
         delta = dt - self.origin
@@ -67,7 +79,9 @@ class MinuteStepAdapter:
 
 
 class WeeklyAdapter(DailyAdapter):
-    time_value_type = int
+    def validate_time_value_type(self, value: Any, name: str = "value") -> None:
+        if not isinstance(value, int):
+            raise TypeError(f"{name} must be int. Got {value}")
 
     def to_tick(self, d: date) -> int:
         return super().to_tick(d) // 7

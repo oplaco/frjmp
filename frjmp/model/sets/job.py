@@ -1,6 +1,7 @@
+from frjmp.model.adapter import TimeAdapter
 from frjmp.model.sets.unit import Unit
 from frjmp.model.sets.phase import Phase
-from datetime import date
+from typing import Any
 
 
 class Job:
@@ -8,14 +9,19 @@ class Job:
         self,
         unit: Unit,
         phase: Phase,
-        start,
-        end,
+        adapter: TimeAdapter,
+        start: Any,
+        end: Any,
     ):
         if start is None or end is None:
             raise ValueError("Job start and end must be defined.")
-        if end < start:
+
+        adapter.validate_time_value_type(start)
+        adapter.validate_time_value_type(end)
+
+        if adapter.to_tick(end) < adapter.to_tick(start):
             raise ValueError(
-                f"Job for {unit} {phase} end date {end} cannot be before start date {start}."
+                f"Job for {unit} at {phase} end time {end} cannot be before start time {start}."
             )
 
         self.unit = unit

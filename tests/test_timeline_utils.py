@@ -22,11 +22,12 @@ class TestCompressTimepoints(unittest.TestCase):
         phase1 = Phase("4Y", wp)
         phase2 = Phase("WP", wp)
 
-        job1 = Job(unit, phase1, date(2024, 12, 1), date(2028, 4, 18))
-        job2 = Job(unit, phase2, date(2025, 4, 16), date(2027, 7, 20))
-        job3 = Job(unit, phase2, date(2025, 5, 16), date(2027, 6, 20))
-
         adapter = DailyAdapter(origin=date(2024, 1, 1))
+
+        job1 = Job(unit, phase1, adapter, date(2024, 12, 1), date(2028, 4, 18))
+        job2 = Job(unit, phase2, adapter, date(2025, 4, 16), date(2027, 7, 20))
+        job3 = Job(unit, phase2, adapter, date(2025, 5, 16), date(2027, 6, 20))
+
         compressed, tick_to_index, index_to_tick, index_to_value = compress_timepoints(
             [job1, job2, job3], adapter=adapter
         )
@@ -58,11 +59,11 @@ class TestCompressTimepoints(unittest.TestCase):
         adapter = DailyAdapter(t0)
 
         # end < t0. Should be removed.
-        job1 = Job(unit, phase, date(2025, 1, 2), date(2025, 4, 18))
+        job1 = Job(unit, phase, adapter, date(2025, 1, 2), date(2025, 4, 18))
         # start < t0 < end. Start should be set to t0.
-        job2 = Job(unit, phase, date(2025, 4, 16), date(2025, 7, 20))
+        job2 = Job(unit, phase, adapter, date(2025, 4, 16), date(2025, 7, 20))
         # start > t0. Should be left unmodified.
-        job3 = Job(unit, phase, date(2025, 7, 16), date(2025, 7, 20))
+        job3 = Job(unit, phase, adapter, date(2025, 7, 16), date(2025, 7, 20))
 
         jobs = [job1, job2, job3]
         trim_jobs_before_time_inplace(jobs, t0, adapter)

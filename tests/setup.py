@@ -51,9 +51,9 @@ class BasicTestSetup(unittest.TestCase):
 class ProblemTestSetup(BasicTestSetup):
     def setUp(self):
         super().setUp()
-        job1 = Job(self.unit1, self.phase1, self.date1, self.date3)
-        job2 = Job(self.unit2, self.phase1, self.date1, self.date2)
-        job3 = Job(self.unit3, self.phase1, self.date1, self.date2)
+        job1 = Job(self.unit1, self.phase1, self.adapter, self.date1, self.date3)
+        job2 = Job(self.unit2, self.phase1, self.adapter, self.date1, self.date2)
+        job3 = Job(self.unit3, self.phase1, self.adapter, self.date1, self.date2)
         self.jobs = [job1, job2, job3]
         self.position1 = Position("Position 1", [self.need1], capacity=1)
         self.position2 = Position("Position 2", [self.need1], capacity=1)
