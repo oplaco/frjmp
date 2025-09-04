@@ -86,7 +86,7 @@ class Solution:
         rows: List[Dict[str, Any]] = []
         idx2time = self.problem.index_to_value
         assignments = self.assignments
-        out_position = "OUT"
+        out_position = self.problem.positions_configuration.out_position
 
         for unit_name, t_dict in self.problem.unit_movement_vars.items():
             for t_idx, var in t_dict.items():

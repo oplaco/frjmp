@@ -72,9 +72,9 @@ sol = Solution(problem, solver, status)
 
 if sol.metrics.is_feasible:
     print("Objective:", sol.metrics.objective_value)
-    print(sol.assignments.head())
-    print(sol.movements.head())
-    print(sol.patterns.head())
+    print(sol.assignments)
+    print(sol.movements)
+    print(sol.patterns)
     plot_solution(problem, solver)
 else:
     print("No feasible solution.")

@@ -5,12 +5,14 @@ from typing import Dict, List
 class PositionsConfiguration:
     def __init__(
         self,
-        positions: List[Position] = None,
+        positions: List[Position],
+        out_position: Position = Position("OUT", [], 0),
         triggers: dict[tuple[Position, Position], set[Position]] = None,
         out_paths: dict[tuple[Position, Position], list[Position]] = None,
         in_paths: dict[tuple[Position, Position], list[Position]] = None,
     ):
-        self.positions = positions or []
+        self.positions = positions
+        self.out_position = out_position
         self.triggers = triggers or {}
         self.out_paths = out_paths or {}
         self.in_paths = in_paths or {}
