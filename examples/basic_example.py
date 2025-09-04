@@ -14,6 +14,7 @@ from frjmp.model.sets.job import Job
 from frjmp.model.problem import Problem
 from frjmp.model.parameters.positions_configuration import PositionsConfiguration
 from frjmp.model.parameters.position_unit_model import PositionsUnitTypeDependency
+from frjmp.model.solution import Solution
 from examples.plot_example import plot_solution
 from frjmp.utils.preprocessing_utils import insert_waiting_jobs
 
@@ -67,40 +68,13 @@ problem = Problem(
 # Solve
 status, solver = problem.solve()
 
-# Print results
-print("\nSolution:")
-if status == 4:
-    print("\nOptimal Solution found:")
-    for j_idx, j_dict in problem.unit_movement_vars.items():
-        for t_idx, var in j_dict.items():
-            if solver.Value(var) == 1:
-                print(
-                    f"Movement Job {j_idx} at t={t_idx} ({problem.index_to_value[t_idx]})"
-                )
+sol = Solution(problem, solver, status)
 
-    for j_idx, j_dict in problem.assigned_vars.items():
-        for p_idx, p_dict in j_dict.items():
-            for t_idx, var in p_dict.items():
-                if solver.Value(var) == 1:
-                    print(
-                        f"Assignment of Job {j_idx} to position {p_idx} at  t={t_idx} ({problem.index_to_value[t_idx]})"
-                    )
-
-    for j_idx, j_dict in problem.pattern_assigned_vars.items():
-        job = problem.jobs[j_idx]
-        for t_idx, t_dict in j_dict.items():
-            for k_idx, var in t_dict.items():
-                if solver.Value(var) == 1:
-                    pattern = job.unit.type.allowed_patterns[k_idx]
-                    pos_names = [p.name for p in pattern.positions]
-                    print(
-                        f"Job {j_idx} at t={t_idx} ({problem.index_to_value[t_idx]}): "
-                        f"Pattern {k_idx} → Positions {pos_names}"
-                    )
-
+if sol.metrics.is_feasible:
+    print("Objective:", sol.metrics.objective_value)
+    print(sol.assignments.head())
+    print(sol.movements.head())
+    print(sol.patterns.head())
     plot_solution(problem, solver)
-
 else:
-    print("No solution found.")
-
-print("Finished.")
+    print("No feasible solution.")
